@@ -32,6 +32,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { User, Transaction, DashboardStats, Customer, Packet, AppSettings } from './types';
 import { cn } from './lib/utils';
 import { generateInvoicePDF } from './lib/pdf';
+import { io, Socket } from 'socket.io-client';
+
+const socket: Socket = io();
 
 const CATEGORIES = {
   pemasukan: ['Tagihan Bulanan', 'Voucher', 'Pemasangan Baru', 'Denda', 'Lainnya'],
@@ -56,6 +59,25 @@ export default function App() {
   const [printerStatus, setPrinterStatus] = useState<'not_connected' | 'checking' | 'ready'>('not_connected');
   const [receiptToPreview, setReceiptToPreview] = useState<{ transaction: Transaction; userName: string } | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  useEffect(() => {
+    socket.on('transaction:created', () => setRefreshTrigger(prev => prev + 1));
+    socket.on('transaction:deleted', () => setRefreshTrigger(prev => prev + 1));
+    socket.on('customer:updated', () => setRefreshTrigger(prev => prev + 1));
+    socket.on('packet:updated', () => setRefreshTrigger(prev => prev + 1));
+    socket.on('settings:updated', (newSettings) => setSettings(newSettings));
+    socket.on('deposit:updated', () => setRefreshTrigger(prev => prev + 1));
+
+    return () => {
+      socket.off('transaction:created');
+      socket.off('transaction:deleted');
+      socket.off('customer:updated');
+      socket.off('packet:updated');
+      socket.off('settings:updated');
+      socket.off('deposit:updated');
+    };
+  }, []);
 
   useEffect(() => {
     const handler = (e: any) => {
@@ -329,25 +351,26 @@ export default function App() {
           >
             {user.role === 'admin' ? (
               <>
-                {activeTab === 'dashboard' && <AdminDashboard user={user} settings={settings} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
-                {activeTab === 'customers' && <CustomerManagement user={user} />}
-                {activeTab === 'packets' && <PacketManagement user={user} />}
-                {activeTab === 'users' && <UserManagement user={user} />}
-                {activeTab === 'reports' && <PaymentReport user={user} />}
+                {activeTab === 'dashboard' && <AdminDashboard user={user} settings={settings} refreshTrigger={refreshTrigger} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
+                {activeTab === 'customers' && <CustomerManagement user={user} refreshTrigger={refreshTrigger} />}
+                {activeTab === 'packets' && <PacketManagement user={user} refreshTrigger={refreshTrigger} />}
+                {activeTab === 'users' && <UserManagement user={user} refreshTrigger={refreshTrigger} />}
+                {activeTab === 'reports' && <PaymentReport user={user} refreshTrigger={refreshTrigger} />}
                 {activeTab === 'settings' && (
                   <SettingsManagement 
                     user={user} 
                     deferredPrompt={deferredPrompt} 
                     onInstall={handleInstallClick} 
+                    refreshTrigger={refreshTrigger}
                   />
                 )}
-                {activeTab === 'history' && <AdminDashboard user={user} settings={settings} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
+                {activeTab === 'history' && <AdminDashboard user={user} settings={settings} refreshTrigger={refreshTrigger} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
               </>
             ) : (
               <>
-                {activeTab === 'dashboard' && <CollectorDashboard user={user} settings={settings} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
-                {activeTab === 'customers' && <CustomerManagement user={user} />}
-                {activeTab === 'history' && <CollectorDashboard user={user} settings={settings} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
+                {activeTab === 'dashboard' && <CollectorDashboard user={user} settings={settings} refreshTrigger={refreshTrigger} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
+                {activeTab === 'customers' && <CustomerManagement user={user} refreshTrigger={refreshTrigger} />}
+                {activeTab === 'history' && <CollectorDashboard user={user} settings={settings} refreshTrigger={refreshTrigger} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
               </>
             )}
           </motion.div>
@@ -521,7 +544,7 @@ function LoginScreen({ onLogin }: { onLogin: (e: React.FormEvent<HTMLFormElement
   );
 }
 
-function AdminDashboard({ user, settings, onShowReceipt }: { user: User, settings: AppSettings | null, onShowReceipt?: (t: Transaction, u: string) => void }) {
+function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger }: { user: User, settings: AppSettings | null, onShowReceipt?: (t: Transaction, u: string) => void, refreshTrigger?: number }) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -572,7 +595,7 @@ function AdminDashboard({ user, settings, onShowReceipt }: { user: User, setting
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { fetchData(); }, [refreshTrigger]);
 
   const handleDownloadInvoice = async (transactionId: number) => {
     try {
@@ -868,7 +891,7 @@ function AdminDashboard({ user, settings, onShowReceipt }: { user: User, setting
   );
 }
 
-function CollectorDashboard({ user, settings, onShowReceipt }: { user: User, settings: AppSettings | null, onShowReceipt?: (t: Transaction, u: string) => void }) {
+function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger }: { user: User, settings: AppSettings | null, onShowReceipt?: (t: Transaction, u: string) => void, refreshTrigger?: number }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [packets, setPackets] = useState<Packet[]>([]);
@@ -926,7 +949,7 @@ function CollectorDashboard({ user, settings, onShowReceipt }: { user: User, set
     }
   };
 
-  useEffect(() => { fetchInitialData(); }, []);
+  useEffect(() => { fetchInitialData(); }, [refreshTrigger]);
 
   const handleDownloadInvoice = async (transactionId: number) => {
     try {
@@ -1889,7 +1912,7 @@ function Receipt({ transaction, userName, settings }: { transaction: Transaction
   );
 }
 
-function CustomerManagement({ user }: { user: User }) {
+function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigger?: number }) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [packets, setPackets] = useState<Packet[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -1909,7 +1932,7 @@ function CustomerManagement({ user }: { user: User }) {
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { fetchData(); }, [refreshTrigger]);
 
   const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -2163,7 +2186,7 @@ function CustomerManagement({ user }: { user: User }) {
   );
 }
 
-function PacketManagement({ user }: { user: User }) {
+function PacketManagement({ user, refreshTrigger }: { user: User, refreshTrigger?: number }) {
   const [packets, setPackets] = useState<Packet[]>([]);
   const [showForm, setShowForm] = useState(false);
 
@@ -2176,7 +2199,7 @@ function PacketManagement({ user }: { user: User }) {
     }
   };
 
-  useEffect(() => { fetchPackets(); }, []);
+  useEffect(() => { fetchPackets(); }, [refreshTrigger]);
 
   const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -2269,7 +2292,7 @@ function PacketManagement({ user }: { user: User }) {
   );
 }
 
-function SettingsManagement({ user, deferredPrompt, onInstall }: { user: User, deferredPrompt?: any, onInstall?: () => void }) {
+function SettingsManagement({ user, deferredPrompt, onInstall, refreshTrigger }: { user: User, deferredPrompt?: any, onInstall?: () => void, refreshTrigger?: number }) {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -2289,7 +2312,7 @@ function SettingsManagement({ user, deferredPrompt, onInstall }: { user: User, d
     }
   };
 
-  useEffect(() => { fetchSettings(); }, []);
+  useEffect(() => { fetchSettings(); }, [refreshTrigger]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -2461,7 +2484,7 @@ function SettingsManagement({ user, deferredPrompt, onInstall }: { user: User, d
   );
 }
 
-function UserManagement({ user }: { user: User }) {
+function UserManagement({ user, refreshTrigger }: { user: User, refreshTrigger?: number }) {
   const [users, setUsers] = useState<User[]>([]);
   const [showForm, setShowForm] = useState(false);
 
@@ -2474,7 +2497,7 @@ function UserManagement({ user }: { user: User }) {
     }
   };
 
-  useEffect(() => { fetchUsers(); }, []);
+  useEffect(() => { fetchUsers(); }, [refreshTrigger]);
 
   const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -2822,7 +2845,7 @@ function TransactionModal({ user, isAdmin, onClose, onSuccess }: { user: User, i
   );
 }
 
-function PaymentReport({ user }: { user: User }) {
+function PaymentReport({ user, refreshTrigger }: { user: User, refreshTrigger?: number }) {
   const [data, setData] = useState<any[]>([]);
   const [months, setMonths] = useState<string[]>([]);
 
@@ -2841,7 +2864,7 @@ function PaymentReport({ user }: { user: User }) {
       }
     };
     fetchReport();
-  }, []);
+  }, [refreshTrigger]);
 
   const customers = Array.from(new Set(data.map(d => d.customer_name))).sort();
 

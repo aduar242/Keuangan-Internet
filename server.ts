@@ -5,6 +5,8 @@ import { fileURLToPath } from 'url';
 import Database from 'better-sqlite3';
 import { z } from 'zod';
 import cors from 'cors';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -86,7 +88,24 @@ if (userCount.count === 0) {
 
 async function startServer() {
   const app = express();
+  const httpServer = createServer(app);
+  const io = new Server(httpServer, {
+    cors: {
+      origin: "*",
+      methods: ["GET", "POST"]
+    }
+  });
   const PORT = 3000;
+
+  io.on('connection', (socket) => {
+    console.log('User connected:', socket.id);
+    socket.on('disconnect', () => console.log('User disconnected:', socket.id));
+  });
+
+  // Helper to broadcast updates
+  const broadcast = (event: string, data: any) => {
+    io.emit(event, data);
+  };
 
   app.use(cors());
   app.use(express.json());
@@ -214,7 +233,9 @@ async function startServer() {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       const result = stmt.run(req.user.id, data.customer_id || null, data.type, data.category, data.amount, data.description || '', data.transaction_date, status, data.billing_period || null);
-      res.json({ id: result.lastInsertRowid, ...data, status });
+      const newTransaction = { id: result.lastInsertRowid, ...data, status, user_id: req.user.id };
+      broadcast('transaction:created', newTransaction);
+      res.json(newTransaction);
     } catch (err: any) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ error: 'Validation error: ' + err.issues.map(e => e.message).join(', ') });
@@ -241,7 +262,10 @@ async function startServer() {
   app.delete('/api/transactions/:id', authMiddleware, adminOnly, (req, res) => {
     try {
       const result = db.prepare('DELETE FROM transactions WHERE id = ?').run(req.params.id);
-      if (result.changes > 0) res.json({ success: true });
+      if (result.changes > 0) {
+        broadcast('transaction:deleted', { id: req.params.id });
+        res.json({ success: true });
+      }
       else res.status(404).json({ error: 'Transaction not found' });
     } catch (err) {
       res.status(500).json({ error: 'Failed to delete transaction' });
@@ -282,6 +306,7 @@ async function startServer() {
     try {
       if (req.user.role !== 'penagih') return res.status(403).json({ error: 'Only collectors can submit deposits' });
       db.prepare("UPDATE transactions SET status = 'deposited' WHERE user_id = ? AND status = 'pending'").run(req.user.id);
+      broadcast('deposit:updated', { collector_id: req.user.id, status: 'deposited' });
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ error: 'Failed to submit deposit' });
@@ -292,6 +317,7 @@ async function startServer() {
     try {
       const { collector_id } = req.body;
       db.prepare("UPDATE transactions SET status = 'confirmed' WHERE user_id = ? AND status = 'deposited'").run(collector_id);
+      broadcast('deposit:updated', { collector_id, status: 'confirmed' });
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ error: 'Failed to confirm deposit' });
@@ -312,6 +338,7 @@ async function startServer() {
     try {
       const { name, price } = req.body;
       const result = db.prepare('INSERT INTO packets (name, price) VALUES (?, ?)').run(name, price);
+      broadcast('packet:updated', { id: result.lastInsertRowid, name, price, action: 'created' });
       res.json({ id: result.lastInsertRowid, name, price });
     } catch (err) {
       res.status(500).json({ error: 'Failed to create packet' });
@@ -321,6 +348,7 @@ async function startServer() {
   app.delete('/api/packets/:id', authMiddleware, adminOnly, (req, res) => {
     try {
       db.prepare('DELETE FROM packets WHERE id = ?').run(req.params.id);
+      broadcast('packet:updated', { id: req.params.id, action: 'deleted' });
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ error: 'Failed to delete packet' });
@@ -356,7 +384,9 @@ async function startServer() {
       const { name, address, phone, packet, created_at } = req.body;
       const finalCreatedAt = created_at ? `${created_at}-01T00:00:00Z` : new Date().toISOString();
       const result = db.prepare('INSERT INTO customers (name, address, phone, packet, created_at) VALUES (?, ?, ?, ?, ?)').run(name, address, phone, packet, finalCreatedAt);
-      res.json({ id: result.lastInsertRowid, name, address, phone, packet, created_at: finalCreatedAt });
+      const newCustomer = { id: result.lastInsertRowid, name, address, phone, packet, created_at: finalCreatedAt };
+      broadcast('customer:updated', { customer: newCustomer, action: 'created' });
+      res.json(newCustomer);
     } catch (err) {
       res.status(500).json({ error: 'Failed to create customer' });
     }
@@ -375,6 +405,7 @@ async function startServer() {
       } else {
         db.prepare('UPDATE customers SET name = ?, address = ?, phone = ?, packet = ? WHERE id = ?').run(name, address, phone, packet, req.params.id);
       }
+      broadcast('customer:updated', { id: req.params.id, name, address, phone, packet, created_at: finalCreatedAt, action: 'updated' });
       res.json({ id: req.params.id, name, address, phone, packet, created_at: finalCreatedAt });
     } catch (err) {
       res.status(500).json({ error: 'Failed to update customer' });
@@ -384,6 +415,7 @@ async function startServer() {
   app.delete('/api/customers/:id', authMiddleware, adminOnly, (req, res) => {
     try {
       db.prepare('DELETE FROM customers WHERE id = ?').run(req.params.id);
+      broadcast('customer:updated', { id: req.params.id, action: 'deleted' });
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ error: 'Failed to delete customer' });
@@ -431,6 +463,7 @@ async function startServer() {
         SET company_name = ?, company_address = ?, company_phone = ?, receipt_footer = ?, currency_symbol = ? 
         WHERE id = 1
       `).run(company_name, company_address, company_phone, receipt_footer, currency_symbol);
+      broadcast('settings:updated', req.body);
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ error: 'Failed to update settings' });
@@ -488,7 +521,7 @@ async function startServer() {
     app.get('*', (req, res) => res.sendFile(path.join(distPath, 'index.html')));
   }
 
-  app.listen(PORT, '0.0.0.0', () => console.log(`Server running on http://localhost:${PORT}`));
+  httpServer.listen(PORT, '0.0.0.0', () => console.log(`Server running on http://localhost:${PORT}`));
 }
 
 startServer();
