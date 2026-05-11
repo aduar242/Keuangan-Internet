@@ -203,8 +203,9 @@ async function startServer() {
         `).all();
       } else {
         transactions = db.prepare(`
-          SELECT t.*, c.name as customer_name 
+          SELECT t.*, u.name as collector_name, c.name as customer_name 
           FROM transactions t
+          JOIN users u ON t.user_id = u.id
           LEFT JOIN customers c ON t.customer_id = c.id
           WHERE t.user_id = ? 
           ORDER BY t.transaction_date DESC, t.id DESC
@@ -234,14 +235,16 @@ async function startServer() {
       }
 
       // Check for duplicate billing period for the same customer
-      if (data.type === 'pemasukan' && data.category === 'Tagihan Bulanan' && data.customer_id && data.billing_period) {
-        const existing = db.prepare(`
-          SELECT id FROM transactions 
-          WHERE customer_id = ? AND billing_period = ? AND category = 'Tagihan Bulanan'
-        `).get(data.customer_id, data.billing_period);
-        
-        if (existing) {
-          return res.status(400).json({ error: `Tagihan untuk bulan ${data.billing_period} sudah dibayar.` });
+      if (data.category === 'Tagihan Bulanan' && data.customer_id && data.billing_period) {
+        const periods = data.billing_period.split(',').map((p: string) => p.trim());
+        for (const p of periods) {
+          const exists = db.prepare(`
+            SELECT id FROM transactions 
+            WHERE customer_id = ? AND billing_period LIKE ? AND category = 'Tagihan Bulanan' AND status != 'cancelled'
+          `).get(data.customer_id, `%${p}%`);
+          if (exists) {
+            return res.status(400).json({ error: `Bulan ${p} sudah dibayar.` });
+          }
         }
       }
 
@@ -251,7 +254,16 @@ async function startServer() {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       const result = stmt.run(req.user.id, data.customer_id || null, data.type, data.category, data.amount, data.description || '', data.transaction_date, status, data.billing_period || null);
-      const newTransaction = { id: result.lastInsertRowid, ...data, status, user_id: req.user.id };
+      
+      // Return enriched object
+      const newTransaction = db.prepare(`
+        SELECT t.*, u.name as collector_name, c.name as customer_name 
+        FROM transactions t 
+        JOIN users u ON t.user_id = u.id 
+        LEFT JOIN customers c ON t.customer_id = c.id
+        WHERE t.id = ?
+      `).get(result.lastInsertRowid);
+      
       broadcast('transaction:created', newTransaction);
       res.json(newTransaction);
     } catch (err: any) {
@@ -376,22 +388,16 @@ async function startServer() {
   // Customers
   app.get('/api/customers', authMiddleware, (req, res) => {
     try {
-      const currentMonth = new Date().toISOString().slice(0, 7);
       const customers = db.prepare(`
         SELECT c.*, u.name as collector_name,
-               (SELECT COUNT(*) FROM transactions t 
-                WHERE t.customer_id = c.id 
-                AND t.billing_period = ? 
-                AND t.category = 'Tagihan Bulanan') > 0 as is_paid,
-               (SELECT MAX(transaction_date) FROM transactions t 
-                WHERE t.customer_id = c.id) as last_payment_date,
                (SELECT group_concat(billing_period) FROM transactions t 
                 WHERE t.customer_id = c.id 
-                AND t.category = 'Tagihan Bulanan') as paid_months
+                AND t.category = 'Tagihan Bulanan'
+                AND t.status != 'cancelled') as paid_months
         FROM customers c 
         LEFT JOIN users u ON c.collector_id = u.id
         ORDER BY name ASC
-      `).all(currentMonth);
+      `).all();
       res.json(customers);
     } catch (err) {
       res.status(500).json({ error: 'Failed to fetch customer list' });

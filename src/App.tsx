@@ -86,11 +86,21 @@ const CATEGORIES = {
 const getBillingPeriods = () => {
   const periods = [];
   const now = new Date();
-  for (let i = -6; i <= 3; i++) {
+  for (let i = -12; i <= 3; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
     periods.push(d.toISOString().slice(0, 7));
   }
   return periods.sort();
+};
+
+const formatPeriod = (period: string) => {
+  if (!period) return '';
+  const [year, month] = period.split('-');
+  const monthNames = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  ];
+  return `${monthNames[parseInt(month) - 1]} ${year}`;
 };
 
 export default function App() {
@@ -854,7 +864,10 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger }: { use
                             {t.status}
                           </div>
                        </div>
-                       <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">{t.customer_name ? t.category : t.description}</div>
+                       <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">
+                          {t.customer_name ? t.category : t.description}
+                          {t.billing_period && t.category === 'Tagihan Bulanan' && ` - ${t.billing_period.split(',').map(p => formatPeriod(p.trim())).join(', ')}`}
+                       </div>
                      </div>
                   </div>
                 </div>
@@ -904,7 +917,10 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger }: { use
                   <td className="px-8 py-5 font-mono text-slate-400 text-xs">{t.transaction_date}</td>
                   <td className="px-8 py-5">
                     <div className="font-black text-slate-800">{t.customer_name || t.category}</div>
-                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{t.customer_name ? t.category : t.description}</div>
+                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
+                      {t.customer_name ? t.category : t.description}
+                      {t.billing_period && t.category === 'Tagihan Bulanan' && ` - ${t.billing_period.split(',').map(p => formatPeriod(p.trim())).join(', ')}`}
+                    </div>
                   </td>
                   <td className="px-8 py-5 text-center">
                     <div className={cn(
@@ -1133,45 +1149,46 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger }: {
     c.address?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getUnpaidMonthsList = (payments: any[]) => {
-    if (!selectedCustomerId) return [];
-    const customer = customers.find(c => String(c.id) === selectedCustomerId);
-    const joinMonth = customer?.created_at?.slice(0, 7) || '2000-01';
+  // Robust logic for calculating unpaid months
+  const getUnpaidMonthsList = (customer: Customer | undefined) => {
+    if (!customer) return [];
     
-    const now = new Date();
-    const months = [];
-    for (let i = -6; i <= 3; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-      const period = d.toISOString().slice(0, 7);
-      
-      // Filter: only show months starting from join month
-      if (period < joinMonth) continue;
-      
-      const isPaid = payments.some(p => p.billing_period === period && p.category === 'Tagihan Bulanan');
-      if (!isPaid) {
-        months.push(period);
-      }
+    const paidPeriods = new Set<string>();
+    if (customer.paid_months) {
+      customer.paid_months.split(',').forEach(p => paidPeriods.add(p.trim()));
     }
-    return months.sort();
-  };
 
-  const getUnpaidForCustomer = (c: Customer) => {
-    const paidArr = c.paid_months ? c.paid_months.split(',') : [];
-    const joinMonth = c.created_at?.slice(0, 7) || '2000-01';
+    const joinMonth = customer.created_at?.slice(0, 7) || '2000-01';
     const now = new Date();
     const months = [];
-    for (let i = -6; i <= 0; i++) {
+    
+    // We check from join date up to NEXT month (for advance payments)
+    // Professional ISP usually bills for current month.
+    // Let's check from 12 months back up to 2 months ahead.
+    for (let i = -12; i <= 2; i++) {
         const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
         const period = d.toISOString().slice(0, 7);
         if (period < joinMonth) continue;
-        if (!paidArr.includes(period)) {
+        if (!paidPeriods.has(period)) {
             months.push(period);
         }
     }
     return months.sort();
   };
 
-  const unpaidMonthsList = getUnpaidMonthsList(customerPayments);
+  // Helper for formatting period display
+  const formatPeriod = (period: string) => {
+    if (!period || period === '') return '';
+    const [year, month] = period.split('-');
+    const monthNames = [
+      'JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN',
+      'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'
+    ];
+    return `${monthNames[parseInt(month) - 1]} ${year}`;
+  };
+
+  const selectedCustomer = customers.find(c => String(c.id) === selectedCustomerId);
+  const unpaidMonthsList = getUnpaidMonthsList(selectedCustomer);
 
   const togglePeriod = (period: string) => {
     setSelectedPeriods(prev => 
@@ -1209,27 +1226,30 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger }: {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    const formData = new FormData(e.currentTarget);
-    const customerId = formData.get('customer_id');
-    const billingPeriod = formData.get('billing_period');
-    const billingPeriods = selectedPeriods.length > 0 ? selectedPeriods : (billingPeriod ? [String(billingPeriod)] : []);
-
-    if (billingPeriods.length === 0) {
+    
+    if (selectedPeriods.length === 0 && selectedCategory === 'Tagihan Bulanan') {
       alert('Pilih setidaknya satu bulan tagihan.');
       setLoading(false);
       return;
     }
 
     try {
-      for (const period of billingPeriods) {
+      // For multiple months, we send ONE transaction if it's simpler, 
+      // but let's send individual ones to keep the "One Transaction per Month" logic clean in DB
+      // or join them if the amount is the total.
+      // Let's use the individual approach for crystal clear records.
+      
+      const periodsToPay = selectedCategory === 'Tagihan Bulanan' ? selectedPeriods : [new Date().toISOString().slice(0, 7)];
+      
+      for (const period of periodsToPay) {
         const data = {
           type: 'pemasukan',
-          category: formData.get('category') || 'Tagihan Bulanan',
+          category: selectedCategory,
           amount: Number(amount),
-          description: billingPeriods.length > 1 ? `Pembayaran: ${billingPeriods.join(', ')}` : (formData.get('description') || `Tagihan Bulan ${period}`),
-          billing_period: period,
+          description: selectedCategory === 'Tagihan Bulanan' ? `Internet ${formatPeriod(period)}` : (e.currentTarget.description as any).value,
+          billing_period: selectedCategory === 'Tagihan Bulanan' ? period : null,
           transaction_date: new Date().toISOString().split('T')[0],
-          customer_id: customerId ? Number(customerId) : null
+          customer_id: selectedCustomerId ? Number(selectedCustomerId) : null
         };
 
         const res = await fetch('/api/transactions', {
@@ -1241,34 +1261,32 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger }: {
           body: JSON.stringify(data)
         });
         
-        if (res.ok) {
-          const savedTrans = await res.json();
-          const customer = customers.find(c => c.id === data.customer_id);
-          const printObj = { ...savedTrans, customer_name: customer?.name, billing_period: billingPeriods.join(', ') };
-          
-          if (onShowReceipt) {
-            onShowReceipt(printObj, user.name);
-          } else {
-            window.print();
-          }
-        } else {
+        if (!res.ok) {
           const errorData = await res.json();
-          alert(errorData.error || 'Gagal menyimpan transaksi.');
-          setLoading(false);
-          return;
+          throw new Error(errorData.error || 'Gagal menyimpan transaksi.');
+        }
+        
+        // Show receipt for each or the last one? 
+        // For thermal printers, one receipt per month is actually standard for ISP collectors.
+        if (periodsToPay.indexOf(period) === periodsToPay.length - 1) {
+            const savedTrans = await res.json();
+            if (onShowReceipt) onShowReceipt(savedTrans, user.name);
+            else window.print();
         }
       }
 
       setSelectedCustomerId('');
       setAmount('');
       setSelectedPeriods([]);
+      setSearchTerm('');
       e.currentTarget.reset();
       fetchInitialData();
-    } catch (err) {
-      console.error(err);
-      alert('Gagal menyimpan. Terjadi kesalahan koneksi.');
+      alert('Pembayaran Berhasil Dicatat!');
+    } catch (err: any) {
+      alert(err.message || 'Terjadi kesalahan.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -1405,10 +1423,10 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger }: {
                         >
                           <div className="font-bold text-slate-900 flex items-center justify-between">
                             <span>{c.name}</span>
-                            {c.is_paid ? (
+                            {getUnpaidMonthsList(c).length === 0 ? (
                               <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">LUNAS</span>
                             ) : (
-                              <span className="text-[9px] font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full">BELUM BAYAR</span>
+                              <span className="text-[9px] font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full">{getUnpaidMonthsList(c).length} BLN</span>
                             )}
                           </div>
                           <div className="text-[10px] text-slate-500 uppercase flex justify-between">
@@ -1439,7 +1457,7 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger }: {
                 <div className="mb-3 flex items-center gap-2">
                   <span className="text-[10px] font-bold bg-indigo-500/50 text-indigo-50 px-2 py-1 rounded-full flex items-center gap-1">
                     <History className="w-3 h-3" /> 
-                    Tracking sejak: {customers.find(c => String(c.id) === selectedCustomerId)?.created_at?.slice(0, 7) || '-'}
+                    Tracking sejak: {formatPeriod(customers.find(c => String(c.id) === selectedCustomerId)?.created_at?.slice(0, 7) || '') || '-'}
                   </span>
                 </div>
               )}
@@ -1451,17 +1469,21 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger }: {
                       type="button"
                       onClick={() => togglePeriod(m)}
                       className={cn(
-                        "px-3 py-2 rounded-xl text-xs font-bold transition-all border-2",
+                        "px-3 py-2 rounded-xl text-[10px] font-black transition-all border-2 uppercase tracking-tight",
                         selectedPeriods.includes(m) 
-                          ? "bg-white text-indigo-600 border-white shadow-lg" 
-                          : "bg-indigo-500 text-indigo-100 border-indigo-400 hover:bg-indigo-400"
+                          ? "bg-amber-400 text-slate-900 border-amber-400 shadow-lg scale-105" 
+                          : "bg-indigo-500 text-indigo-100 border-indigo-400 hover:bg-white hover:text-indigo-600"
                       )}
                     >
-                      {m}
+                      {formatPeriod(m)}
                       {m > new Date().toISOString().slice(0, 7) && <span className="ml-1 opacity-50">(Depan)</span>}
                       {selectedPeriods.includes(m) && <Check className="w-3 h-3 ml-1 inline" />}
                     </button>
                   ))
+                ) : selectedCustomerId && selectedCategory === 'Tagihan Bulanan' ? (
+                  <div className="bg-emerald-500/20 text-emerald-100 border border-emerald-400/30 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4" /> Lunas / Tidak ada tunggakan
+                  </div>
                 ) : (
                   <input name="billing_period" type="month" defaultValue={new Date().toISOString().slice(0, 7)} className="w-full bg-white text-slate-900 border-none px-4 py-3 rounded-xl focus:ring-4 focus:ring-indigo-400/30 transition-all font-medium" />
                 )}
@@ -1584,7 +1606,10 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger }: {
                     </div>
                     <div>
                       <p className="font-black text-slate-800 text-sm whitespace-nowrap overflow-hidden text-ellipsis max-w-32">{t.customer_name || t.category}</p>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">{t.customer_name ? t.category : t.description}</p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">
+                        {t.customer_name ? t.category : t.description}
+                        {t.billing_period && t.category === 'Tagihan Bulanan' && ` - ${t.billing_period.split(',').map(p => formatPeriod(p.trim())).join(', ')}`}
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">
@@ -1618,63 +1643,65 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger }: {
             Penagihan Belum Lunas ({new Date().toLocaleString('id-ID', { month: 'long' })})
           </h3>
           <span className="text-[10px] font-bold bg-rose-50 text-rose-600 px-2 py-1 rounded-full uppercase">
-            {customers.filter(c => !c.is_paid).length} Pelanggan
+            {customers.filter(c => getUnpaidMonthsList(c).length > 0).length} Menunggak
           </span>
         </div>
         <div className="grid grid-cols-1 gap-3">
-          {customers.filter(c => !c.is_paid).map((c) => {
-            const unpaid = getUnpaidForCustomer(c);
-            const amount = c.packet.split(' - Rp ')[1] || '0';
-            
-            return (
-              <motion.div 
-                key={c.id}
-                whileHover={{ x: 5 }}
-                onClick={() => {
-                  setSelectedCustomerId(String(c.id));
-                  setSearchTerm(c.name);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                className="bg-white p-5 rounded-2xl border-l-4 border-l-rose-500 border-y border-r border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer group"
-              >
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="font-bold text-slate-800">{c.name}</p>
-                      <span className="text-[9px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase">{c.packet.split(' - ')[0]}</span>
+          {customers
+            .map(c => ({ ...c, unpaid: getUnpaidMonthsList(c) }))
+            .filter(c => c.unpaid.length > 0)
+            .map((c) => {
+              const amountMatch = c.packet.match(/Rp\s?([\d.,]+)/);
+              const price = amountMatch ? amountMatch[1] : '0';
+              
+              return (
+                <motion.div 
+                  key={c.id}
+                  whileHover={{ x: 5 }}
+                  onClick={() => {
+                    setSelectedCustomerId(String(c.id));
+                    setSearchTerm(c.name);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="bg-white p-5 rounded-2xl border-l-4 border-l-rose-500 border-y border-r border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+                >
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-bold text-slate-800">{c.name}</p>
+                        <span className="text-[9px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase">{c.packet.split(' - ')[0]}</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 font-medium mb-3">{c.address}</p>
+                      
+                      <div className="flex flex-wrap gap-1.5">
+                        {c.unpaid.map(m => (
+                          <span key={m} className="text-[9px] font-black bg-rose-50 text-rose-500 px-2 py-1 rounded-md border border-rose-100 uppercase tracking-tighter">
+                            {formatPeriod(m)}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                    <p className="text-[10px] text-slate-400 font-medium mb-3">{c.address}</p>
                     
-                    <div className="flex flex-wrap gap-1.5">
-                      {unpaid.map(m => (
-                        <span key={m} className="text-[9px] font-black bg-rose-50 text-rose-500 px-2 py-1 rounded-md border border-rose-100">
-                          {m}
-                        </span>
-                      ))}
-                      {unpaid.length === 0 && <span className="text-[9px] text-emerald-500 font-bold">Periode ini belum update</span>}
+                    <div className="flex items-center gap-6 text-right shrink-0">
+                      <div>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Tunggakan</p>
+                        <p className="text-sm font-black text-rose-600">{c.unpaid.length} Bulan</p>
+                      </div>
+                      <div className="hidden sm:block">
+                        <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Estimasi Total</p>
+                        <p className="text-xs font-mono font-bold text-slate-600">
+                          Rp {(parseInt(price.replace(/[.,]/g, '')) * c.unpaid.length).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="w-10 h-10 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center group-hover:bg-rose-500 group-hover:text-white transition-colors">
+                        <Plus className="w-5 h-5" />
+                      </div>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center gap-6 text-right shrink-0">
-                    <div>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Tagihan</p>
-                      <p className="text-sm font-black text-rose-600">Rp {amount}</p>
-                    </div>
-                    <div className="hidden sm:block">
-                      <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Bayar Terakhir</p>
-                      <p className="text-xs font-mono font-bold text-slate-600">
-                        {c.last_payment_date?.split('T')[0] || <span className="text-rose-300 italic">N/A</span>}
-                      </p>
-                    </div>
-                    <div className="w-10 h-10 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center group-hover:bg-rose-500 group-hover:text-white transition-colors">
-                      <Plus className="w-5 h-5" />
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-          {customers.filter(c => !c.is_paid).length === 0 && (
+                </motion.div>
+              );
+            })}
+          {customers.filter(c => getUnpaidMonthsList(c).length > 0).length === 0 && (
             <div className="text-center py-10 bg-emerald-50 border-2 border-dashed border-emerald-100 rounded-2xl">
               <Check className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
               <p className="text-emerald-700 font-bold">Luar Biasa! Semua pelanggan sudah lunas.</p>
@@ -1943,9 +1970,15 @@ function ReceiptPreviewModal({ transaction, userName, settings, onClose }: { tra
                  {transaction.billing_period && (
                     <div className="bg-indigo-50/50 p-2 rounded-lg flex justify-between items-center border border-indigo-100/50">
                        <span className="text-[7px] font-bold text-indigo-400 uppercase">Periode</span>
-                       <span className="font-black text-indigo-600 bg-white px-1.5 py-0.5 rounded shadow-sm text-[9px]">{transaction.billing_period}</span>
+                       <span className="font-black text-indigo-600 bg-white px-1.5 py-0.5 rounded shadow-sm text-[9px]">
+                          {transaction.billing_period.split(',').map(p => formatPeriod(p.trim())).join(', ')}
+                       </span>
                     </div>
                  )}
+                 <div className="flex justify-between border-t border-slate-50 pt-2">
+                    <span className="text-[7px] font-bold text-slate-400 uppercase">Petugas</span>
+                    <span className="font-black uppercase">{transaction.collector_name || userName}</span>
+                 </div>
                  <div className="pt-2 border-t border-slate-100">
                     <div className="flex justify-between items-center mb-1">
                        <span className="text-[8px] font-bold text-slate-400 uppercase">Jumlah Bayar</span>
