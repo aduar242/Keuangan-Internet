@@ -112,7 +112,11 @@ async function startServer() {
     next();
   };
 
-  // --- API ROUTES ---
+  // API routes FIRST
+  app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
   app.get('/api/me', authMiddleware, (req: any, res) => {
     try {
       res.json(req.user);
@@ -413,7 +417,7 @@ async function startServer() {
   // Settings
   app.get('/api/settings', authMiddleware, (req, res) => {
     try {
-      res.json(db.prepare('SELECT * FROM settings WHERE id = 1').get());
+      res.json(db.prepare('SELECT * FROM settings WHERE id = 1').get() || {});
     } catch (err) {
       res.status(500).json({ error: 'Failed to fetch settings' });
     }
