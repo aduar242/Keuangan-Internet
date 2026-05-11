@@ -37,6 +37,7 @@ import {
   ArrowLeft,
   PlusCircle,
   MinusCircle,
+  UserCheck,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Transaction, DashboardStats, Customer, Packet, AppSettings } from './types';
@@ -403,7 +404,7 @@ export default function App() {
           >
             {user.role === 'admin' ? (
               <>
-                {activeTab === 'dashboard' && <AdminDashboard user={user} settings={settings} refreshTrigger={refreshTrigger} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
+                {activeTab === 'dashboard' && <AdminDashboard user={user} settings={settings} refreshTrigger={refreshTrigger} setRefreshTrigger={setRefreshTrigger} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
                 {activeTab === 'customers' && <CustomerManagement user={user} refreshTrigger={refreshTrigger} />}
                 {activeTab === 'packets' && <PacketManagement user={user} refreshTrigger={refreshTrigger} />}
                 {activeTab === 'users' && <UserManagement user={user} refreshTrigger={refreshTrigger} />}
@@ -416,13 +417,13 @@ export default function App() {
                     refreshTrigger={refreshTrigger}
                   />
                 )}
-                {activeTab === 'history' && <AdminDashboard user={user} settings={settings} refreshTrigger={refreshTrigger} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
+                {activeTab === 'history' && <AdminDashboard user={user} settings={settings} refreshTrigger={refreshTrigger} setRefreshTrigger={setRefreshTrigger} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
               </>
             ) : (
               <>
-                {activeTab === 'dashboard' && <CollectorDashboard user={user} settings={settings} refreshTrigger={refreshTrigger} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
+                {activeTab === 'dashboard' && <CollectorDashboard user={user} settings={settings} refreshTrigger={refreshTrigger} setRefreshTrigger={setRefreshTrigger} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
                 {activeTab === 'customers' && <CustomerManagement user={user} refreshTrigger={refreshTrigger} />}
-                {activeTab === 'history' && <CollectorDashboard user={user} settings={settings} refreshTrigger={refreshTrigger} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
+                {activeTab === 'history' && <CollectorDashboard user={user} settings={settings} refreshTrigger={refreshTrigger} setRefreshTrigger={setRefreshTrigger} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
               </>
             )}
           </motion.div>
@@ -596,7 +597,7 @@ function LoginScreen({ onLogin }: { onLogin: (e: React.FormEvent<HTMLFormElement
   );
 }
 
-function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger }: { user: User, settings: AppSettings | null, onShowReceipt?: (t: Transaction, u: string) => void, refreshTrigger?: number }) {
+function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefreshTrigger }: { user: User, settings: AppSettings | null, onShowReceipt?: (t: Transaction, u: string) => void, refreshTrigger?: number, setRefreshTrigger?: React.Dispatch<React.SetStateAction<number>> }) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -991,7 +992,7 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger }: { use
   );
 }
 
-function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger }: { user: User, settings: AppSettings | null, onShowReceipt?: (t: Transaction, u: string) => void, refreshTrigger?: number }) {
+function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefreshTrigger }: { user: User, settings: AppSettings | null, onShowReceipt?: (t: Transaction, u: string) => void, refreshTrigger?: number, setRefreshTrigger?: React.Dispatch<React.SetStateAction<number>> }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [packets, setPackets] = useState<Packet[]>([]);
@@ -1582,15 +1583,23 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger }: {
             </div>
           </div>
           <div className="grid grid-cols-1 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-indigo-100 mb-2">Keterangan (Opsional)</label>
-              <input 
-                name="description" 
-                type="text" 
-                placeholder="Catatan kecil..."
-                className="w-full bg-white text-slate-900 border-none px-4 py-3 rounded-xl focus:ring-4 focus:ring-indigo-400/30 transition-all" 
-              />
+            <div className="bg-indigo-600/30 border border-indigo-400/30 rounded-2xl p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-indigo-500/50 flex items-center justify-center text-white font-black">
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-[10px] text-indigo-200 font-bold uppercase tracking-widest">Petugas Penerima (Penagih)</p>
+                  <p className="font-black text-white">{user.name}</p>
+                </div>
+              </div>
+              <div className="bg-emerald-500 text-white text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-tighter shadow-lg">
+                Verified Account
+              </div>
             </div>
+            {/* We hide the technical description input but keep it for metadata if needed, 
+                or just replace it entirely as requested */}
+            <input name="description" type="hidden" value={`Setoran via ${user.name}`} />
           </div>
           <button 
             type="submit" 
@@ -1650,6 +1659,9 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger }: {
                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">
                         {t.customer_name ? t.category : t.description}
                         {t.billing_period && t.category === 'Tagihan Bulanan' && ` - ${t.billing_period.split(',').map(p => formatPeriod(p.trim())).join(', ')}`}
+                      </p>
+                      <p className="text-[8px] text-indigo-400 font-black uppercase mt-1 flex items-center gap-1">
+                        <UserCheck className="w-2 h-2" /> Petugas: {t.collector_name || user.name}
                       </p>
                     </div>
                   </div>
@@ -2154,7 +2166,6 @@ function Receipt({ transaction, userName, settings }: { transaction: Transaction
 function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigger?: number }) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [packets, setPackets] = useState<Packet[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [isOldCustomer, setIsOldCustomer] = useState(false);
@@ -2162,14 +2173,12 @@ function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigg
 
   const fetchData = async () => {
     try {
-      const [custRes, packRes, userRes] = await Promise.all([
+      const [custRes, packRes] = await Promise.all([
         fetch('/api/customers', { headers: { 'x-user-id': String(user.id) } }),
-        fetch('/api/packets', { headers: { 'x-user-id': String(user.id) } }),
-        fetch('/api/users', { headers: { 'x-user-id': String(user.id) } })
+        fetch('/api/packets', { headers: { 'x-user-id': String(user.id) } })
       ]);
       if (custRes.ok) setCustomers(await custRes.json());
       if (packRes.ok) setPackets(await packRes.json());
-      if (userRes.ok) setUsers(await userRes.json());
     } catch (err) {
       console.error('Failed to fetch customer management data:', err);
     }
@@ -2229,8 +2238,7 @@ function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigg
 
   const filtered = customers.filter(c => 
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    c.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.collector_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    c.address?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -2245,7 +2253,7 @@ function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigg
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
             <input 
               type="text" 
-              placeholder="Cari nama, alamat, penagih..." 
+              placeholder="Cari nama atau alamat..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full h-14 pl-12 pr-6 bg-slate-50 border-none rounded-2xl font-bold text-slate-700 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
@@ -2282,7 +2290,7 @@ function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigg
                        <UserIcon className="w-5 h-5 text-indigo-500" /> 
                        {editingCustomer ? 'Update Data' : 'Registrasi Pelanggan'}
                     </h3>
-                    <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest leading-none">Database & Relasi Penagih</p>
+                    <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest leading-none">Database & Inventori Pelanggan</p>
                  </div>
                  <button onClick={() => { setShowForm(false); setEditingCustomer(null); }} className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-all active:rotate-90">
                     <X className="w-6 h-6" />
@@ -2316,15 +2324,6 @@ function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigg
                     <div className="space-y-2">
                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">No. WhatsApp</label>
                        <input name="phone" defaultValue={editingCustomer?.phone} placeholder="62812..." className="w-full bg-slate-50 border-none h-14 px-6 rounded-2xl font-bold text-slate-700 outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all" />
-                    </div>
-                    <div className="space-y-2">
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Petugas Penagih</label>
-                       <select name="collector_id" defaultValue={editingCustomer?.collector_id} className="w-full bg-slate-50 border-none h-14 px-6 rounded-2xl font-bold text-slate-700 outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all appearance-none">
-                          <option value="">-- PILIH PENAGIH --</option>
-                          {users.filter(u => u.role === 'penagih').map(u => (
-                            <option key={u.id} value={u.id}>{u.name}</option>
-                          ))}
-                       </select>
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Paket Layanan</label>
@@ -2408,14 +2407,8 @@ function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigg
              </div>
 
              <div className="bg-slate-50/50 p-4 rounded-3xl border border-dashed border-slate-200">
-                <div className="flex justify-between items-center mb-3">
-                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Petugas Penagih</span>
-                   <span className="text-[10px] font-black text-slate-700 bg-white px-3 py-1 rounded-lg shadow-sm border border-slate-100">
-                      {c.collector_name || 'BELUM DISET'}
-                   </span>
-                </div>
                 <div className="flex justify-between items-center">
-                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Mulai Tagihan</span>
+                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Mulai Berlangganan</span>
                    <span className="text-[10px] font-bold text-indigo-500 flex items-center gap-1">
                       <Calendar className="w-3" /> {c.created_at?.slice(0, 7) || 'Manual'}
                    </span>
