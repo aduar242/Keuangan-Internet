@@ -334,7 +334,13 @@ export default function App() {
                 {activeTab === 'packets' && <PacketManagement user={user} />}
                 {activeTab === 'users' && <UserManagement user={user} />}
                 {activeTab === 'reports' && <PaymentReport user={user} />}
-                {activeTab === 'settings' && <SettingsManagement user={user} />}
+                {activeTab === 'settings' && (
+                  <SettingsManagement 
+                    user={user} 
+                    deferredPrompt={deferredPrompt} 
+                    onInstall={handleInstallClick} 
+                  />
+                )}
                 {activeTab === 'history' && <AdminDashboard user={user} settings={settings} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
               </>
             ) : (
@@ -2263,7 +2269,7 @@ function PacketManagement({ user }: { user: User }) {
   );
 }
 
-function SettingsManagement({ user }: { user: User }) {
+function SettingsManagement({ user, deferredPrompt, onInstall }: { user: User, deferredPrompt?: any, onInstall?: () => void }) {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -2428,6 +2434,29 @@ function SettingsManagement({ user }: { user: User }) {
            Tes Print Halaman
         </button>
       </div>
+
+      {deferredPrompt && (
+        <div className="bg-gradient-to-br from-indigo-700 to-slate-900 rounded-[2.5rem] p-8 shadow-2xl shadow-indigo-200/50 border border-indigo-400/20 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full -mr-32 -mt-32 blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-500/5 rounded-full -ml-32 -mb-32 blur-3xl"></div>
+          
+          <div className="flex items-center gap-6 relative z-10">
+            <div className="w-20 h-20 bg-white/10 rounded-3xl flex items-center justify-center text-white backdrop-blur-xl border border-white/20 shadow-inner">
+              <Download className="w-10 h-10" />
+            </div>
+            <div>
+              <h3 className="text-2xl font-black text-white tracking-tighter leading-none mb-2">Aplikasi Mobile Ready</h3>
+              <p className="text-indigo-200 font-bold text-sm max-w-[300px] leading-relaxed">Pasang aplikasi ke layar utama untuk pengalaman yang lebih cepat, offline, dan stabil.</p>
+            </div>
+          </div>
+          <button 
+            onClick={onInstall}
+            className="w-full md:w-auto bg-white text-indigo-700 hover:bg-indigo-50 px-10 py-5 rounded-2xl font-black text-xs uppercase tracking-[0.25em] shadow-2xl active:scale-95 transition-all relative z-10 flex items-center justify-center gap-3 lg:min-w-[200px]"
+          >
+            Install Sekarang
+          </button>
+        </div>
+      )}
     </div>
   );
 }
