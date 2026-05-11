@@ -1094,34 +1094,36 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger }: {
 
   useEffect(() => {
     if (selectedCustomerId) {
-      fetch(`/api/customers/${selectedCustomerId}/payments`, { headers: { 'x-user-id': String(user.id) } })
-        .then(res => res.json())
-        .then(data => {
-          setCustomerPayments(data);
-          const unpaid = getUnpaidMonthsList(data);
-          if (unpaid.length > 0) {
-            // Default to the EARLIEST unpaid month (bulan setelah pembayaran terakhir)
-            setSelectedPeriods([unpaid[0]]);
-          } else {
-            setSelectedPeriods([]);
-          }
-        });
-      
       const customer = customers.find(c => String(c.id) === selectedCustomerId);
       if (customer) {
         setSearchTerm(customer.name);
         
-        // Auto-set amount for Monthly Billing category
+        // Calculate unpaid months for this customer
+        const unpaid = getUnpaidMonthsList(customer);
+        if (unpaid.length > 0) {
+          // If no periods currently selected (or if user just switched customer), select the first unpaid
+          if (selectedPeriods.length === 0) {
+             setSelectedPeriods([unpaid[0]]);
+          }
+        } else {
+          setSelectedPeriods([]);
+        }
+
+        // Auto-set amount for Monthly Billing
         if (selectedCategory === 'Tagihan Bulanan') {
-          // Extract price more robustly: look for Rp then numbers, dots, or commas
           const priceMatch = customer.packet.match(/Rp\s?([\d.,]+)/);
           if (priceMatch) {
-            // Remove dots and commas to get the raw number
             const numericPrice = priceMatch[1].replace(/[.,]/g, '');
             setAmount(numericPrice);
           }
         }
       }
+      
+      // Also fetch history context for this customer (optional but good for tracking)
+      fetch(`/api/customers/${selectedCustomerId}/payments`, { headers: { 'x-user-id': String(user.id) } })
+        .then(res => res.json())
+        .then(data => setCustomerPayments(data));
+        
     } else {
       setCustomerPayments([]);
       setAmount('');
@@ -1225,22 +1227,19 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger }: {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading(true);
-    
+    if (loading) return;
+
     if (selectedPeriods.length === 0 && selectedCategory === 'Tagihan Bulanan') {
       alert('Pilih setidaknya satu bulan tagihan.');
-      setLoading(false);
       return;
     }
 
+    setLoading(true);
+    
     try {
-      // For multiple months, we send ONE transaction if it's simpler, 
-      // but let's send individual ones to keep the "One Transaction per Month" logic clean in DB
-      // or join them if the amount is the total.
-      // Let's use the individual approach for crystal clear records.
-      
       const periodsToPay = selectedCategory === 'Tagihan Bulanan' ? selectedPeriods : [new Date().toISOString().slice(0, 7)];
-      
+      let lastTransactionId = null;
+
       for (const period of periodsToPay) {
         const data = {
           type: 'pemasukan',
@@ -1265,23 +1264,50 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger }: {
           const errorData = await res.json();
           throw new Error(errorData.error || 'Gagal menyimpan transaksi.');
         }
-        
-        // Show receipt for each or the last one? 
-        // For thermal printers, one receipt per month is actually standard for ISP collectors.
-        if (periodsToPay.indexOf(period) === periodsToPay.length - 1) {
-            const savedTrans = await res.json();
-            if (onShowReceipt) onShowReceipt(savedTrans, user.name);
-            else window.print();
+
+        const result = await res.json();
+        lastTransactionId = result.id;
+      }
+
+      // If we made it here, all payments succeeded
+      alert('Pembayaran Berhasil Dicatat!');
+      
+      // Auto-Print Receipt if requested
+      if (lastTransactionId) {
+        const transRes = await fetch(`/api/transactions/${lastTransactionId}`, {
+          headers: { 'x-user-id': String(user.id) }
+        });
+        if (transRes.ok) {
+          const fullTrans = await transRes.json();
+          // For the receipt, if we paid multiple months, we might want to override the period display
+          if (periodsToPay.length > 1) {
+            fullTrans.billing_period = periodsToPay.join(', ');
+            fullTrans.amount = totalAmount; // Show total on receipt
+          }
+          if (onShowReceipt) onShowReceipt(fullTrans, user.name);
+          else window.print();
         }
       }
 
-      setSelectedCustomerId('');
-      setAmount('');
-      setSelectedPeriods([]);
-      setSearchTerm('');
-      e.currentTarget.reset();
-      fetchInitialData();
-      alert('Pembayaran Berhasil Dicatat!');
+      // Reset selection but keep customer selected so they can see remaining unpaid
+      setSelectedPeriods([]); 
+      setRefreshTrigger(prev => prev + 1);
+      
+      // Clear description
+      const descInput = e.currentTarget.querySelector('[name="description"]') as HTMLInputElement;
+      if (descInput) descInput.value = '';
+
+      // If no more unpaid, clear everything
+      setTimeout(() => {
+        const currentCustomers = customers; // Using a closure-safe ref or rely on next render
+        const currentId = selectedCustomerId;
+        const cust = currentCustomers.find(c => String(c.id) === currentId);
+        if (cust && getUnpaidMonthsList(cust).length === 0) {
+          setSelectedCustomerId('');
+          setSearchTerm('');
+        }
+      }, 1000);
+
     } catch (err: any) {
       alert(err.message || 'Terjadi kesalahan.');
     } finally {
@@ -1394,17 +1420,32 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger }: {
                 </button>
               </div>
               <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Cari nama atau alamat..."
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setShowCustomerList(true);
-                  }}
-                  onFocus={() => setShowCustomerList(true)}
-                  className="w-full bg-white text-slate-900 border-none px-4 py-3 rounded-xl focus:ring-4 focus:ring-indigo-400/30 transition-all font-medium"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Cari nama atau alamat..."
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setShowCustomerList(true);
+                    }}
+                    onFocus={() => setShowCustomerList(true)}
+                    className="w-full bg-white text-slate-900 border-none px-4 py-3 rounded-xl focus:ring-4 focus:ring-indigo-400/30 transition-all font-medium pr-10"
+                  />
+                  {searchTerm && (
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        setSelectedCustomerId('');
+                        setSearchTerm('');
+                        setSelectedPeriods([]);
+                      }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500 transition-colors"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
                 <input type="hidden" name="customer_id" value={selectedCustomerId} />
                 
                 {showCustomerList && searchTerm && (
