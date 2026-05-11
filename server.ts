@@ -65,7 +65,7 @@ db.exec(`
 
 // --- RUNTIME MIGRATIONS ---
 try {
-  db.prepare('ALTER TABLE transactions ADD COLUMN status TEXT CHECK(status IN ("pending", "deposited", "confirmed")) DEFAULT "confirmed"').run();
+  db.prepare("ALTER TABLE transactions ADD COLUMN status TEXT CHECK(status IN ('pending', 'deposited', 'confirmed')) DEFAULT 'confirmed'").run();
 } catch (e) {}
 try {
   db.prepare('ALTER TABLE transactions ADD COLUMN billing_period TEXT').run();
@@ -74,7 +74,7 @@ try {
 // Seed default settings if not exists
 const settingsCount = db.prepare('SELECT count(*) as count FROM settings').get() as { count: number };
 if (settingsCount.count === 0) {
-  db.prepare('INSERT INTO settings (id, company_name, company_address, company_phone, receipt_footer) VALUES (1, "RT/RW NET", "Jln. Kebon Jeruk No. 88, Jakarta Selatan", "0812-XXXX-XXXX", "Terima kasih telah berlangganan.")').run();
+  db.prepare('INSERT INTO settings (id, company_name, company_address, company_phone, receipt_footer) VALUES (?, ?, ?, ?, ?)').run(1, 'RT/RW NET', 'Jln. Kebon Jeruk No. 88, Jakarta Selatan', '0812-XXXX-XXXX', 'Terima kasih telah berlangganan.');
 }
 
 // Seed default users if not exists
