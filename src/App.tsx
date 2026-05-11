@@ -14,6 +14,7 @@ import {
   LayoutDashboard,
   Coins,
   Printer,
+  Target,
   Users as UsersIcon,
   Users2,
   CalendarCheck2,
@@ -28,6 +29,11 @@ import {
   Settings,
   UserPlus,
   WifiOff,
+  Wifi,
+  MapPin,
+  AlertTriangle,
+  X,
+  CheckCircle,
   ArrowLeft,
   PlusCircle,
   MinusCircle,
@@ -834,39 +840,41 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger }: { use
                      </div>
                      <div>
                        <div className="font-black text-slate-800 leading-tight text-sm">{t.customer_name || t.category}</div>
-                       <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">{t.customer_name ? t.category : t.description}</div>
+                       <div className="flex items-center gap-1.5 mt-1">
+                          <div className="bg-indigo-50 text-indigo-500 text-[8px] font-black uppercase px-2 py-0.5 rounded-full flex items-center gap-1">
+                             <UserIcon className="w-2.5 h-2.5" />
+                             {t.collector_name?.split(' ')[0] || 'ADMIN'}
+                          </div>
+                          <div className={cn(
+                            "text-[8px] font-black uppercase px-2 py-0.5 rounded-full",
+                            t.status === 'confirmed' ? "bg-emerald-50 text-emerald-600" : 
+                            t.status === 'deposited' ? "bg-amber-50 text-amber-600" :
+                            "bg-slate-50 text-slate-400"
+                          )}>
+                            {t.status}
+                          </div>
+                       </div>
+                       <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">{t.customer_name ? t.category : t.description}</div>
                      </div>
-                  </div>
-                  <div className="text-right">
-                    <div className={cn(
-                      "font-black tabular-nums text-sm",
-                      t.type === 'pemasukan' ? "text-emerald-600" : "text-rose-600"
-                    )}>
-                      {t.type === 'pemasukan' ? '+' : '-'} {new Intl.NumberFormat('id-ID').format(t.amount)}
-                    </div>
-                    <div className={cn(
-                      "text-[8px] font-black uppercase px-2 py-0.5 rounded-full mt-1 inline-block",
-                      t.status === 'confirmed' ? "bg-emerald-50 text-emerald-600" : 
-                      t.status === 'deposited' ? "bg-amber-50 text-amber-600" :
-                      "bg-slate-50 text-slate-400"
-                    )}>
-                      {t.status}
-                    </div>
                   </div>
                 </div>
                 
                 <div className="flex justify-between items-center mt-4 pt-3 border-t border-slate-50">
                   <div className="text-[9px] text-slate-400 font-black uppercase tracking-widest flex items-center gap-3">
                     <span className="flex items-center gap-1"><Calendar className="w-3" /> {t.transaction_date.split('-').reverse().join('/')}</span>
-                    <span className="flex items-center gap-1 text-indigo-500">
-                      <UserIcon className="w-3" />
-                      {t.collector_name?.split(' ')[0] || 'ADMIN'}
-                    </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[8px] font-black text-slate-300 uppercase tracking-tighter">Swipe Left for Actions</span>
+                  <div className="text-right">
+                    <div className={cn(
+                      "font-black tabular-nums text-base",
+                      t.type === 'pemasukan' ? "text-emerald-600" : "text-rose-600"
+                    )}>
+                      {t.type === 'pemasukan' ? '+' : '-'} {new Intl.NumberFormat('id-ID').format(t.amount)}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-50 justify-center">
+                    <span className="text-[8px] font-black text-slate-300 uppercase tracking-tighter">Geser ke kiri untuk aksi</span>
                     <ArrowLeft className="w-3 h-3 text-slate-300 animate-pulse" />
-                  </div>
                 </div>
               </motion.div>
             </motion.div>
@@ -985,6 +993,7 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger }: {
   const [isPrinting, setIsPrinting] = useState(false);
   const [isOldInQuickAdd, setIsOldInQuickAdd] = useState(false);
   const [pAmount, setPAmount] = useState('');
+  const [showPrinterSettings, setShowPrinterSettings] = useState(false);
 
   const printTransaction = async (id: number) => {
     try {
@@ -1264,25 +1273,79 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger }: {
 
   return (
     <div className="space-y-8 max-w-2xl mx-auto pb-12">
-      <div className="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-xl shadow-indigo-900/5 flex flex-col md:flex-row md:items-center justify-between gap-8">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
-            <Wallet className="w-8 h-8" />
-          </div>
-          <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Kas di Tangan Anda</p>
-            <p className="text-4xl font-black text-slate-800 tracking-tighter">Rp {heldBalance.toLocaleString()}</p>
-          </div>
+        {/* Quick Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+           {/* Summary Tooltips */}
+           <div className="bg-indigo-600 p-6 rounded-[2.5rem] text-white shadow-xl shadow-indigo-200 border-b-4 border-indigo-800 flex flex-col justify-between">
+              <div>
+                <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-1">Kas di Tangan</p>
+                <p className="text-3xl font-black tracking-tighter leading-none">Rp {heldBalance.toLocaleString()}</p>
+              </div>
+              <button 
+                onClick={handleDeposit}
+                disabled={heldBalance === 0}
+                className="mt-6 w-full bg-white text-indigo-600 py-3 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <Coins className="w-4 h-4" /> Setor ke Admin
+              </button>
+           </div>
+           
+           <div className="grid grid-cols-2 gap-4">
+             {/* Printer Card */}
+             <div 
+               onClick={() => setShowPrinterSettings(!showPrinterSettings)}
+               className={cn(
+                 "p-5 rounded-[2rem] border transition-all active:scale-95 cursor-pointer flex flex-col justify-between",
+                 showPrinterSettings ? "bg-slate-900 border-slate-900 shadow-xl" : "bg-white border-slate-100 shadow-sm"
+               )}
+             >
+                <div className={cn(
+                  "w-10 h-10 rounded-xl flex items-center justify-center mb-3",
+                  showPrinterSettings ? "bg-white/10 text-white" : "bg-indigo-50 text-indigo-600"
+                )}>
+                   <Printer className="w-5 h-5" />
+                </div>
+                <div>
+                   <p className={cn("text-[8px] font-black uppercase tracking-widest leading-none mb-1", showPrinterSettings ? "text-slate-500" : "text-slate-400")}>Printer</p>
+                   <p className={cn("text-xs font-black", showPrinterSettings ? "text-white" : "text-slate-800")}>Thermal</p>
+                </div>
+             </div>
+             {/* Info Card */}
+             <div className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col justify-between">
+                <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-3">
+                   <Target className="w-5 h-5" />
+                </div>
+                <div>
+                   <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Target</p>
+                   <p className="text-xs font-black text-emerald-600">Terbaik</p>
+                </div>
+             </div>
+           </div>
         </div>
-        <button 
-          onClick={handleDeposit}
-          disabled={heldBalance === 0}
-          className="bg-indigo-600 text-white font-black px-8 py-5 rounded-2xl hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-indigo-500/20 flex items-center justify-center gap-3 w-full md:w-auto group active:scale-95"
-        >
-          <Coins className="w-6 h-6 group-hover:scale-125 transition-transform" /> 
-          <span className="uppercase tracking-widest text-xs">Setor ke Admin</span>
-        </button>
-      </div>
+
+        {/* Printer Settings Overlay (Mobile Only) */}
+        <AnimatePresence>
+          {showPrinterSettings && (
+            <motion.div 
+               initial={{ opacity: 0, height: 0 }}
+               animate={{ opacity: 1, height: 'auto' }}
+               exit={{ opacity: 0, height: 0 }}
+               className="bg-indigo-600 rounded-3xl p-5 overflow-hidden"
+            >
+               <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-white font-black text-xs uppercase tracking-widest">Printer Thermal</h4>
+                  <div className="px-3 py-1 bg-white/20 rounded-full text-[8px] font-black text-white uppercase">Bluetooth Mode</div>
+               </div>
+               <p className="text-white/70 text-[10px] leading-relaxed mb-4">Pastikan printer thermal 58mm/80mm Anda sudah terkoneksi dengan HP melalui Bluetooth. Sistem akan otomatis memanggil aplikasi printer thermal saat mencetak.</p>
+               <button 
+                  onClick={() => window.print()}
+                  className="w-full bg-white text-indigo-600 py-3 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2"
+               >
+                  <Wifi className="w-4 h-4" /> Tes Cetak Sekarang
+               </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
 
       <header className="mb-4">
@@ -1493,6 +1556,11 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger }: {
               animate={{ opacity: 1, x: 0 }}
               className="relative overflow-hidden bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-indigo-500/5 transition-all group"
             >
+              {/* Status Indicator */}
+              <div className="absolute inset-y-0 left-0 w-1 flex flex-col">
+                 <div className={cn("flex-1", t.status === 'confirmed' ? "bg-emerald-400" : t.status === 'deposited' ? "bg-amber-400" : "bg-slate-200")}></div>
+              </div>
+
               {/* Background Action (Revealed via Drag) */}
               <div className="absolute inset-0 bg-indigo-50 flex items-center justify-end px-6 gap-3">
                  <button onClick={() => printTransaction(t.id)} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-200 flex items-center justify-center">
@@ -1515,7 +1583,7 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger }: {
                       {t.type === 'pemasukan' ? <PlusCircle className="w-6 h-6" /> : <MinusCircle className="w-6 h-6" />}
                     </div>
                     <div>
-                      <p className="font-black text-slate-800 text-sm">{t.customer_name || t.category}</p>
+                      <p className="font-black text-slate-800 text-sm whitespace-nowrap overflow-hidden text-ellipsis max-w-32">{t.customer_name || t.category}</p>
                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">{t.customer_name ? t.category : t.description}</p>
                     </div>
                   </div>
@@ -1526,7 +1594,9 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger }: {
                     )}>
                       {t.type === 'pemasukan' ? '+' : '-'} {new Intl.NumberFormat('id-ID').format(t.amount)}
                     </p>
-                    <p className="text-[9px] text-slate-300 font-black uppercase tracking-tighter">{t.transaction_date}</p>
+                    <p className="text-[9px] text-slate-300 font-black uppercase tracking-tighter flex items-center gap-2 justify-end">
+                       <span className="flex items-center gap-1"><Printer className="w-2 h-2" /> Geser</span>
+                    </p>
                   </div>
                 </div>
               </motion.div>
@@ -2014,6 +2084,7 @@ function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigg
   const [showForm, setShowForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [isOldCustomer, setIsOldCustomer] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const fetchData = async () => {
     try {
@@ -2082,29 +2153,38 @@ function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigg
     setShowForm(true);
   };
 
+  const filtered = customers.filter(c => 
+    c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    c.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.collector_name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
-    <div className="space-y-6">
-      <header className="flex justify-between items-center">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
+      <div className="bg-white p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col md:flex-row justify-between items-center gap-6">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Data Pelanggan</h2>
-          <p className="text-slate-500">Kelola daftar pelanggan aktif Anda</p>
+          <h2 className="text-3xl font-black text-slate-800 tracking-tight">Data Pelanggan</h2>
+          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Total: {customers.length} Terdaftar</p>
         </div>
-        <button 
-          onClick={() => {
-            if (showForm && editingCustomer) {
-              setEditingCustomer(null);
-              setIsOldCustomer(false);
-            } else {
-              setShowForm(!showForm);
-              setEditingCustomer(null);
-              setIsOldCustomer(false);
-            }
-          }} 
-          className={cn("btn-primary", showForm && "bg-slate-800")}
-        >
-          {showForm ? 'Tutup Form' : <><Plus className="w-5 h-5" /> Tambah Pelanggan</>}
-        </button>
-      </header>
+        <div className="flex gap-4 w-full md:w-auto">
+          <div className="relative flex-1 md:w-64 group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
+            <input 
+              type="text" 
+              placeholder="Cari nama, alamat, penagih..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full h-14 pl-12 pr-6 bg-slate-50 border-none rounded-2xl font-bold text-slate-700 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+            />
+          </div>
+          <button 
+            onClick={() => setShowForm(true)} 
+            className="w-14 h-14 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-200 flex items-center justify-center active:scale-95 transition-all flex-shrink-0"
+          >
+            <PlusCircle className="w-8 h-8" />
+          </button>
+        </div>
+      </div>
 
       <AnimatePresence>
         {showForm && (
@@ -2128,27 +2208,27 @@ function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigg
                        <UserIcon className="w-5 h-5 text-indigo-500" /> 
                        {editingCustomer ? 'Update Data' : 'Registrasi Pelanggan'}
                     </h3>
-                    <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest leading-none">Manajemen Database Pelanggan</p>
+                    <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest leading-none">Database & Relasi Penagih</p>
                  </div>
-                 <button onClick={() => { setShowForm(false); setEditingCustomer(null); }} className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors">
-                    <LogOut className="w-5 h-5 rotate-180" />
+                 <button onClick={() => { setShowForm(false); setEditingCustomer(null); }} className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-all active:rotate-90">
+                    <X className="w-6 h-6" />
                  </button>
               </div>
 
               <div className="p-8 max-h-[70vh] overflow-y-auto">
                 {!editingCustomer && (
-                  <div className="flex bg-slate-100 p-1.5 rounded-2xl mb-8">
+                  <div className="flex bg-slate-100 p-2 rounded-2xl mb-8">
                     <button 
                       onClick={() => setIsOldCustomer(false)}
-                      className={cn("flex-1 py-3 text-[10px] font-black rounded-xl transition-all uppercase tracking-widest", !isOldCustomer ? "bg-white text-indigo-600 shadow-lg" : "text-slate-500")}
+                      className={cn("flex-1 py-3 text-[10px] font-black rounded-xl transition-all uppercase tracking-widest", !isOldCustomer ? "bg-white text-indigo-600 shadow-xl" : "text-slate-500")}
                     >
-                      PELANGGAN BARU
+                      BARU
                     </button>
                     <button 
                       onClick={() => setIsOldCustomer(true)}
-                      className={cn("flex-1 py-3 text-[10px] font-black rounded-xl transition-all uppercase tracking-widest", isOldCustomer ? "bg-white text-indigo-600 shadow-lg" : "text-slate-500")}
+                      className={cn("flex-1 py-3 text-[10px] font-black rounded-xl transition-all uppercase tracking-widest", isOldCustomer ? "bg-white text-indigo-600 shadow-xl" : "text-slate-500")}
                     >
-                      PELANGGAN LAMA / MIGRASI
+                      MIGRASI
                     </button>
                   </div>
                 )}
@@ -2156,91 +2236,55 @@ function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigg
                 <form onSubmit={handleAdd} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Identity Name</label>
-                      <div className="relative group">
-                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500">
-                            <UserIcon className="w-4 h-4" />
-                         </div>
-                         <input name="name" defaultValue={editingCustomer?.name} placeholder="Nama Pelanggan..." className="w-full bg-slate-50 border-none h-12 pl-12 pr-4 rounded-xl font-bold text-slate-700 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all" required />
-                      </div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nama Pelanggan</label>
+                      <input name="name" defaultValue={editingCustomer?.name} placeholder="Nama Lengkap..." className="w-full bg-slate-50 border-none h-14 px-6 rounded-2xl font-bold text-slate-700 outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all" required />
                     </div>
                     <div className="space-y-2">
-                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Contact Access</label>
-                       <div className="relative group">
-                          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500">
-                             <Phone className="w-4 h-4" />
-                          </div>
-                          <input name="phone" defaultValue={editingCustomer?.phone} placeholder="62812345678" className="w-full bg-slate-50 border-none h-12 pl-12 pr-4 rounded-xl font-bold text-slate-700 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all" />
-                       </div>
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">No. WhatsApp</label>
+                       <input name="phone" defaultValue={editingCustomer?.phone} placeholder="62812..." className="w-full bg-slate-50 border-none h-14 px-6 rounded-2xl font-bold text-slate-700 outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all" />
                     </div>
                     <div className="space-y-2">
-                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Assigned Collector</label>
-                       <div className="relative group">
-                          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500">
-                             <UsersIcon className="w-4 h-4" />
-                          </div>
-                          <select name="collector_id" defaultValue={editingCustomer?.collector_id} className="w-full bg-slate-50 border-none h-12 pl-12 pr-4 rounded-xl font-bold text-slate-700 focus:ring-4 focus:ring-indigo-500/10 outline-none appearance-none transition-all">
-                             <option value="">-- PILIH PENAGIH --</option>
-                             {users.filter(u => u.role === 'penagih').map(u => (
-                               <option key={u.id} value={u.id}>{u.name}</option>
-                             ))}
-                          </select>
-                       </div>
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Petugas Penagih</label>
+                       <select name="collector_id" defaultValue={editingCustomer?.collector_id} className="w-full bg-slate-50 border-none h-14 px-6 rounded-2xl font-bold text-slate-700 outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all appearance-none">
+                          <option value="">-- PILIH PENAGIH --</option>
+                          {users.filter(u => u.role === 'penagih').map(u => (
+                            <option key={u.id} value={u.id}>{u.name}</option>
+                          ))}
+                       </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Paket Layanan</label>
+                      <select name="packet" defaultValue={editingCustomer?.packet} className="w-full bg-slate-50 border-none h-14 px-6 rounded-2xl font-bold text-slate-700 outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all appearance-none" required>
+                        <option value="">-- PILIH PAKET --</option>
+                        {packets.map(p => (
+                          <option key={p.id} value={`${p.name} - Rp ${p.price.toLocaleString()}`}>{p.name} (Rp {p.price.toLocaleString()})</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Assign Service Plan</label>
-                      <div className="relative group">
-                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500">
-                            <BarChart3 className="w-4 h-4" />
-                         </div>
-                         <select name="packet" defaultValue={editingCustomer?.packet} className="w-full bg-slate-50 border-none h-12 pl-12 pr-4 rounded-xl font-bold text-slate-700 focus:ring-4 focus:ring-indigo-500/10 outline-none appearance-none transition-all" required>
-                           <option value="">-- PILIH PAKET --</option>
-                           {packets.map(p => {
-                             const packetVal = `${p.name} - Rp ${p.price.toLocaleString()}`;
-                             return <option key={p.id} value={packetVal}>{p.name} (Rp {p.price.toLocaleString()})</option>;
-                           })}
-                         </select>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Installation Address</label>
-                      <div className="relative group">
-                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500">
-                            <LayoutDashboard className="w-4 h-4" />
-                         </div>
-                         <input name="address" defaultValue={editingCustomer?.address} placeholder="Gg. Mangga No. 5..." className="w-full bg-slate-50 border-none h-12 pl-12 pr-4 rounded-xl font-bold text-slate-700 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all" />
-                      </div>
-                    </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Alamat Pemasangan</label>
+                    <textarea name="address" defaultValue={editingCustomer?.address} rows={2} placeholder="Gg. Kenanga No. 5..." className="w-full bg-slate-50 border-none p-6 rounded-2xl font-bold text-slate-700 outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all resize-none" />
                   </div>
 
                   {(isOldCustomer || editingCustomer) && (
-                    <div className="bg-indigo-600 rounded-2xl p-6 text-white shadow-xl shadow-indigo-200">
-                      <label className="block text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-3">Historical Deployment (Join Date)</label>
-                      <div className="relative">
-                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-300">
-                            <Calendar className="w-5 h-5" />
-                         </div>
-                         <input 
-                           name="created_at" 
-                           type="month" 
-                           required
-                           defaultValue={editingCustomer?.created_at?.slice(0, 7) || new Date().toISOString().slice(0, 7)}
-                           className="w-full bg-indigo-500 border border-indigo-400 h-14 pl-12 pr-4 rounded-xl font-black text-white focus:ring-4 focus:ring-white/20 outline-none transition-all" 
-                         />
-                      </div>
-                      <p className="text-[10px] font-bold text-indigo-300 mt-3 italic leading-relaxed">Pilih bulan pertama kali pelanggan mulai berlangganan untuk tracking tunggakan otomatis secara presisi.</p>
+                    <div className="bg-indigo-600 rounded-3xl p-6 text-white shadow-xl shadow-indigo-200">
+                      <label className="text-[10px] font-black text-indigo-200 uppercase tracking-[0.2em] mb-4 block">Bulan Mulai Berlangganan</label>
+                      <input 
+                        name="created_at" 
+                        type="month" 
+                        required
+                        defaultValue={editingCustomer?.created_at?.slice(0, 7) || new Date().toISOString().slice(0, 7)}
+                        className="w-full bg-indigo-500 border border-indigo-400 h-14 px-6 rounded-2xl font-black text-white outline-none" 
+                      />
+                      <p className="text-[9px] font-bold text-indigo-300 mt-4 italic leading-relaxed uppercase tracking-tighter">Sistem akan otomatis menghitung tunggakan mulai dari bulan yang Anda pilih.</p>
                     </div>
                   )}
 
-                  <div className="flex gap-4 pt-4">
-                    <button type="button" onClick={() => { setShowForm(false); setEditingCustomer(null); }} className="flex-1 py-4 text-slate-400 font-black text-xs uppercase tracking-widest hover:text-slate-600 active:scale-95 transition-all">Batal</button>
-                    <button type="submit" className="flex-1 bg-indigo-600 hover:bg-black text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-200 active:scale-95 transition-all uppercase tracking-widest text-xs">
-                      {editingCustomer ? 'Simpan Perubahan' : 'Finalisasi Registrasi'}
-                    </button>
-                  </div>
+                  <button type="submit" className="w-full bg-indigo-600 text-white font-black py-5 rounded-2xl shadow-xl shadow-indigo-200 uppercase tracking-widest text-xs active:scale-95 transition-all">
+                    {editingCustomer ? 'Update Database' : 'Finalisasi Registrasi'}
+                  </button>
                 </form>
               </div>
             </motion.div>
@@ -2248,59 +2292,71 @@ function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigg
         )}
       </AnimatePresence>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {customers.map(c => (
-          <div key={c.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
-            <div>
-              <div className="flex justify-between items-start mb-2">
-                <h4 className="font-bold text-slate-900">{c.name}</h4>
-                <div className="flex flex-col items-end gap-1">
-                  <span className="text-[10px] font-bold bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full uppercase">{c.packet}</span>
-                  {c.is_paid ? (
-                    <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full uppercase flex items-center gap-1">
-                      <Check className="w-2 h-2" /> Lunas
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full uppercase">Belum Bayar</span>
-                  )}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filtered.map(c => (
+          <motion.div 
+            key={c.id} 
+            layout
+            className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-indigo-500/10 transition-all group relative overflow-hidden"
+          >
+             <div className="flex justify-between items-start mb-6">
+                <div>
+                   <h4 className="text-lg font-black text-slate-800 leading-tight">{c.name}</h4>
+                   <div className="flex items-center gap-1.5 mt-2">
+                      <div className={cn(
+                        "px-3 py-1 rounded-full text-[8px] font-black uppercase flex items-center gap-1 shadow-sm",
+                        c.is_paid ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-rose-50 text-rose-600 border border-rose-100"
+                      )}>
+                         {c.is_paid ? <CheckCircle className="w-2.5 h-2.5" /> : <AlertTriangle className="w-2.5 h-2.5" />}
+                         {c.is_paid ? 'LUNAS' : 'TUNGGAKAN'}
+                      </div>
+                      <div className="px-3 py-1 bg-indigo-50 text-indigo-600 text-[8px] font-black uppercase rounded-full border border-indigo-100 shadow-sm">
+                         {c.packet.split(' - ')[0]}
+                      </div>
+                   </div>
                 </div>
-              </div>
-              <p className="text-xs text-slate-500 mb-1 flex items-center gap-1">
-                <Phone className="w-3 h-3 text-slate-400" /> {c.phone || 'No phone'}
-              </p>
-              <p className="text-xs text-slate-400 italic mb-2">{c.address || 'No address'}</p>
-              <div className="bg-slate-50 px-3 py-2 rounded-xl flex flex-col gap-2 border border-dashed border-slate-200">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase leading-none">Mulai Tagihan</span>
-                  <span className="text-[10px] font-black text-indigo-500 flex items-center gap-1 leading-none">
-                    <Calendar className="w-3 h-3" /> {c.created_at?.slice(0, 7) || 'Manual'}
-                  </span>
+                <div className="flex flex-col gap-2">
+                   <button onClick={() => handleEdit(c)} className="p-3 bg-slate-50 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-all active:scale-90">
+                      <Plus className="w-5 h-5 rotate-45" />
+                   </button>
                 </div>
-                <div className="flex items-center justify-between border-t border-slate-100 pt-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase leading-none">Penagih</span>
-                  <span className="text-[10px] font-black text-slate-700 flex items-center gap-1 leading-none">
-                    <UserIcon className="w-3 h-3" /> {c.collector_name || 'Unassigned'}
-                  </span>
+             </div>
+
+             <div className="space-y-4 mb-6">
+                <div className="flex items-center gap-3 text-xs font-bold text-slate-500">
+                   <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400"><MapPin className="w-4 h-4" /></div>
+                   <span className="truncate">{c.address || 'Alamat tidak diatur'}</span>
                 </div>
-              </div>
-            </div>
-            <div className="mt-4 pt-4 border-t border-slate-50 flex justify-between items-center">
-               <button onClick={() => handleEdit(c)} className="text-indigo-400 hover:text-indigo-600 transition-colors flex items-center gap-1 text-xs font-bold">
-                  <Plus className="w-3 h-3 rotate-45" /> Edit / Ganti Paket
-               </button>
-               {user.role === 'admin' && (
-                 <button onClick={() => handleDelete(c.id)} className="text-slate-300 hover:text-rose-600 transition-colors">
-                    <Trash2 className="w-4 h-4" />
-                 </button>
-               )}
-            </div>
-          </div>
+                <div className="flex items-center gap-3 text-xs font-bold text-slate-500">
+                   <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400"><Phone className="w-4 h-4" /></div>
+                   <span>{c.phone || 'No WhatsApp'}</span>
+                </div>
+             </div>
+
+             <div className="bg-slate-50/50 p-4 rounded-3xl border border-dashed border-slate-200">
+                <div className="flex justify-between items-center mb-3">
+                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Petugas Penagih</span>
+                   <span className="text-[10px] font-black text-slate-700 bg-white px-3 py-1 rounded-lg shadow-sm border border-slate-100">
+                      {c.collector_name || 'BELUM DISET'}
+                   </span>
+                </div>
+                <div className="flex justify-between items-center">
+                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Mulai Tagihan</span>
+                   <span className="text-[10px] font-bold text-indigo-500 flex items-center gap-1">
+                      <Calendar className="w-3" /> {c.created_at?.slice(0, 7) || 'Manual'}
+                   </span>
+                </div>
+             </div>
+
+             {user.role === 'admin' && (
+                <div className="mt-6 pt-4 border-t border-slate-50 flex justify-end">
+                   <button onClick={() => handleDelete(c.id)} className="p-2 text-slate-200 hover:text-rose-400 transition-colors">
+                      <Trash2 className="w-4 h-4" />
+                   </button>
+                </div>
+             )}
+          </motion.div>
         ))}
-        {customers.length === 0 && (
-          <div className="col-span-full py-12 text-center border-2 border-dashed border-slate-100 rounded-3xl text-slate-400">
-            Belum ada pelanggan.
-          </div>
-        )}
       </div>
     </div>
   );
@@ -2336,6 +2392,7 @@ function PacketManagement({ user, refreshTrigger }: { user: User, refreshTrigger
       });
       if (res.ok) {
         setShowForm(false);
+        setPrice('');
         fetchPackets();
       } else {
         const errorData = await res.json();
@@ -2364,55 +2421,85 @@ function PacketManagement({ user, refreshTrigger }: { user: User, refreshTrigger
   };
 
   return (
-    <div className="space-y-6">
-      <header className="flex justify-between items-center">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 text-slate-800">
+      <div className="bg-white p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Paket Internet</h2>
-          <p className="text-slate-500">Kelola daftar layanan internet Anda</p>
+          <h2 className="text-3xl font-black tracking-tight">Katalog Layanan</h2>
+          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Total: {packets.length} Pilihan Paket</p>
         </div>
-        <button onClick={() => setShowForm(!showForm)} className="btn-primary">
-          <Plus className="w-5 h-5" /> Tambah Paket
+        <button 
+          onClick={() => setShowForm(!showForm)} 
+          className={cn(
+            "w-14 h-14 rounded-2xl transition-all active:scale-95 shadow-lg flex items-center justify-center",
+            showForm ? "bg-rose-500 text-white shadow-rose-200" : "bg-indigo-600 text-white shadow-indigo-200"
+          )}
+        >
+          {showForm ? <X className="w-8 h-8" /> : <PlusCircle className="w-8 h-8" />}
         </button>
-      </header>
+      </div>
 
-      {showForm && (
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-white p-6 rounded-2xl border border-slate-200">
-          <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input name="name" placeholder="Nama Paket (mis: 10Mbps Gold)" className="input-field" required />
-            <FormattedNumberInput 
-              name="price"
-              value={price}
-              onChange={(val) => setPrice(val)}
-              placeholder="Harga Bulanan (Rp)" 
-              className="input-field" 
-              required 
-            />
-            <button type="submit" className="md:col-span-2 btn-primary">Simpan Paket</button>
-          </form>
-        </motion.div>
-      )}
+      <AnimatePresence>
+        {showForm && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-2xl shadow-indigo-500/10">
+            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 px-1 italic">Buat Penawaran Paket Baru</h3>
+            <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nama Layanan</label>
+                 <input name="name" placeholder="mis: 10Mbps Gold" className="w-full bg-slate-50 border-none h-14 px-6 rounded-2xl font-bold text-slate-700 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all" required />
+              </div>
+              <div className="space-y-2">
+                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Harga Bulanan</label>
+                 <FormattedNumberInput 
+                    name="price"
+                    value={price}
+                    onChange={(val) => setPrice(val)}
+                    placeholder="mis: 150.000" 
+                    className="w-full bg-slate-50 border-none h-14 px-6 rounded-2xl font-bold text-slate-700 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all" 
+                    required 
+                 />
+              </div>
+              <button type="submit" className="md:col-span-2 w-full bg-indigo-600 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-200 active:scale-[0.98] transition-all">Simpan Katalog</button>
+            </form>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {packets.map(p => (
-          <div key={p.id} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between">
-            <div>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Paket Internet</p>
-              <h4 className="text-xl font-black text-slate-800 mb-2">{p.name}</h4>
-              <p className="text-2xl font-bold text-indigo-600">
-                {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(p.price)}
-                <span className="text-xs text-slate-400 font-normal ml-1">/ bulan</span>
-              </p>
-            </div>
-            <div className="mt-6 pt-4 border-t border-slate-50 flex justify-end">
-               <button onClick={() => handleDelete(p.id)} className="text-slate-300 hover:text-rose-600 transition-colors">
-                  <Trash2 className="w-5 h-5" />
-               </button>
-            </div>
-          </div>
+           <motion.div 
+             key={p.id} 
+             layout
+             className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-2xl transition-all group relative overflow-hidden"
+           >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-full -mr-16 -mt-16 group-hover:scale-125 transition-transform duration-500"></div>
+              <div className="relative">
+                 <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1">Standard Plan</p>
+                 <h4 className="text-xl font-black text-slate-800 tracking-tight">{p.name}</h4>
+                 <div className="mt-8 flex items-baseline gap-1">
+                    <span className="text-xs font-bold text-slate-400 uppercase">Rp</span>
+                    <span className="text-4xl font-black text-slate-800 tracking-tighter">
+                       {new Intl.NumberFormat('id-ID').format(p.price)}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase ml-1">/ Bln</span>
+                 </div>
+                 
+                 <div className="mt-8 flex justify-between items-center border-t border-slate-50 pt-6">
+                    <div className="flex -space-x-2">
+                       {[1,2,3].map(i => <div key={i} className="w-6 h-6 rounded-full bg-slate-100 border-2 border-white"></div>)}
+                    </div>
+                    <button 
+                      onClick={() => handleDelete(p.id)}
+                      className="p-3 bg-rose-50 text-rose-300 hover:text-rose-600 rounded-xl transition-all active:scale-90"
+                    >
+                       <Trash2 className="w-5 h-5" />
+                    </button>
+                 </div>
+              </div>
+           </motion.div>
         ))}
         {packets.length === 0 && (
-          <div className="col-span-full py-12 text-center border-2 border-dashed border-slate-100 rounded-3xl text-slate-400">
-            Belum ada paket internet.
+          <div className="col-span-full py-20 text-center border-4 border-dashed border-slate-50 rounded-[3rem] text-slate-300 font-black tracking-widest text-xs uppercase">
+            Belum ada paket layanan
           </div>
         )}
       </div>
