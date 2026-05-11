@@ -1,0 +1,6 @@
+{
+  "name": "RT/RW Net Finance Management",
+  "description": "Financial administration system for community ISPs with role-based access control for Admins and Collectors.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
