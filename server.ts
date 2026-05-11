@@ -36,7 +36,9 @@ db.exec(`
     address TEXT,
     phone TEXT,
     packet TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    collector_id INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (collector_id) REFERENCES users (id)
   );
 
   CREATE TABLE IF NOT EXISTS transactions (
@@ -71,6 +73,9 @@ try {
 } catch (e) {}
 try {
   db.prepare('ALTER TABLE transactions ADD COLUMN billing_period TEXT').run();
+} catch (e) {}
+try {
+  db.prepare('ALTER TABLE customers ADD COLUMN collector_id INTEGER').run();
 } catch (e) {}
 
 // Seed default settings if not exists
@@ -227,6 +232,19 @@ async function startServer() {
       if (req.user.role === 'penagih' && data.type !== 'pemasukan') {
         return res.status(403).json({ error: 'Collectors can only input income' });
       }
+
+      // Check for duplicate billing period for the same customer
+      if (data.type === 'pemasukan' && data.category === 'Tagihan Bulanan' && data.customer_id && data.billing_period) {
+        const existing = db.prepare(`
+          SELECT id FROM transactions 
+          WHERE customer_id = ? AND billing_period = ? AND category = 'Tagihan Bulanan'
+        `).get(data.customer_id, data.billing_period);
+        
+        if (existing) {
+          return res.status(400).json({ error: `Tagihan untuk bulan ${data.billing_period} sudah dibayar.` });
+        }
+      }
+
       const status = req.user.role === 'admin' ? 'confirmed' : 'pending';
       const stmt = db.prepare(`
         INSERT INTO transactions (user_id, customer_id, type, category, amount, description, transaction_date, status, billing_period)
@@ -360,7 +378,7 @@ async function startServer() {
     try {
       const currentMonth = new Date().toISOString().slice(0, 7);
       const customers = db.prepare(`
-        SELECT c.*, 
+        SELECT c.*, u.name as collector_name,
                (SELECT COUNT(*) FROM transactions t 
                 WHERE t.customer_id = c.id 
                 AND t.billing_period = ? 
@@ -371,6 +389,7 @@ async function startServer() {
                 WHERE t.customer_id = c.id 
                 AND t.category = 'Tagihan Bulanan') as paid_months
         FROM customers c 
+        LEFT JOIN users u ON c.collector_id = u.id
         ORDER BY name ASC
       `).all(currentMonth);
       res.json(customers);
@@ -381,10 +400,10 @@ async function startServer() {
 
   app.post('/api/customers', authMiddleware, (req, res) => {
     try {
-      const { name, address, phone, packet, created_at } = req.body;
+      const { name, address, phone, packet, created_at, collector_id } = req.body;
       const finalCreatedAt = created_at ? `${created_at}-01T00:00:00Z` : new Date().toISOString();
-      const result = db.prepare('INSERT INTO customers (name, address, phone, packet, created_at) VALUES (?, ?, ?, ?, ?)').run(name, address, phone, packet, finalCreatedAt);
-      const newCustomer = { id: result.lastInsertRowid, name, address, phone, packet, created_at: finalCreatedAt };
+      const result = db.prepare('INSERT INTO customers (name, address, phone, packet, created_at, collector_id) VALUES (?, ?, ?, ?, ?, ?)').run(name, address, phone, packet, finalCreatedAt, collector_id || null);
+      const newCustomer = { id: result.lastInsertRowid, name, address, phone, packet, created_at: finalCreatedAt, collector_id };
       broadcast('customer:updated', { customer: newCustomer, action: 'created' });
       res.json(newCustomer);
     } catch (err) {
@@ -394,19 +413,19 @@ async function startServer() {
 
   app.put('/api/customers/:id', authMiddleware, (req, res) => {
     try {
-      const { name, address, phone, packet, created_at } = req.body;
+      const { name, address, phone, packet, created_at, collector_id } = req.body;
       let finalCreatedAt = created_at;
       if (created_at && created_at.length === 7) {
         finalCreatedAt = `${created_at}-01T00:00:00Z`;
       }
       
       if (finalCreatedAt) {
-        db.prepare('UPDATE customers SET name = ?, address = ?, phone = ?, packet = ?, created_at = ? WHERE id = ?').run(name, address, phone, packet, finalCreatedAt, req.params.id);
+        db.prepare('UPDATE customers SET name = ?, address = ?, phone = ?, packet = ?, created_at = ?, collector_id = ? WHERE id = ?').run(name, address, phone, packet, finalCreatedAt, collector_id || null, req.params.id);
       } else {
-        db.prepare('UPDATE customers SET name = ?, address = ?, phone = ?, packet = ? WHERE id = ?').run(name, address, phone, packet, req.params.id);
+        db.prepare('UPDATE customers SET name = ?, address = ?, phone = ?, packet = ?, collector_id = ? WHERE id = ?').run(name, address, phone, packet, collector_id || null, req.params.id);
       }
-      broadcast('customer:updated', { id: req.params.id, name, address, phone, packet, created_at: finalCreatedAt, action: 'updated' });
-      res.json({ id: req.params.id, name, address, phone, packet, created_at: finalCreatedAt });
+      broadcast('customer:updated', { id: req.params.id, name, address, phone, packet, created_at: finalCreatedAt, collector_id, action: 'updated' });
+      res.json({ id: req.params.id, name, address, phone, packet, created_at: finalCreatedAt, collector_id });
     } catch (err) {
       res.status(500).json({ error: 'Failed to update customer' });
     }

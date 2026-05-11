@@ -27,6 +27,10 @@ import {
   ArrowRightCircle,
   Settings,
   UserPlus,
+  WifiOff,
+  ArrowLeft,
+  PlusCircle,
+  MinusCircle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Transaction, DashboardStats, Customer, Packet, AppSettings } from './types';
@@ -35,6 +39,38 @@ import { generateInvoicePDF } from './lib/pdf';
 import { io, Socket } from 'socket.io-client';
 
 const socket: Socket = io();
+
+function FormattedNumberInput({ value, onChange, placeholder, className, required, name }: { value: string, onChange: (val: string) => void, placeholder?: string, className?: string, required?: boolean, name?: string }) {
+  const [displayValue, setDisplayValue] = useState('');
+
+  useEffect(() => {
+    if (!value) {
+      setDisplayValue('');
+      return;
+    }
+    const numeric = String(value).replace(/\D/g, '');
+    setDisplayValue(new Intl.NumberFormat('id-ID').format(Number(numeric)));
+  }, [value]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/\D/g, '');
+    onChange(rawValue);
+  };
+
+  return (
+    <>
+      <input 
+        type="text"
+        placeholder={placeholder}
+        className={className}
+        required={required}
+        value={displayValue}
+        onChange={handleChange}
+      />
+      {name && <input type="hidden" name={name} value={value} />}
+    </>
+  );
+}
 
 const CATEGORIES = {
   pemasukan: ['Tagihan Bulanan', 'Voucher', 'Pemasangan Baru', 'Denda', 'Lainnya'],
@@ -764,42 +800,82 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger }: { use
         {/* Mobile View: Cards */}
         <div className="md:hidden divide-y divide-slate-100">
           {transactions.map((t) => (
-            <div key={t.id} className="p-5 hover:bg-slate-50/50 transition-colors">
-              <div className="flex justify-between items-start mb-2">
-                <div className="flex items-center gap-3">
-                   <div className={cn(
-                     "w-10 h-10 rounded-xl flex items-center justify-center",
-                     t.type === 'pemasukan' ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
-                   )}>
-                     {t.type === 'pemasukan' ? <ArrowUpCircle className="w-5 h-5" /> : <ArrowDownCircle className="w-5 h-5" />}
-                   </div>
-                   <div>
-                     <div className="font-black text-slate-800 leading-tight">{t.customer_name || t.category}</div>
-                     <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{t.customer_name ? t.category : t.description}</div>
-                   </div>
-                </div>
-                <div className={cn(
-                  "font-black tabular-nums text-sm",
-                  t.type === 'pemasukan' ? "text-emerald-600" : "text-rose-600"
-                )}>
-                  {t.type === 'pemasukan' ? '+' : '-'} {new Intl.NumberFormat('id-ID').format(t.amount)}
-                </div>
+            <motion.div 
+              key={t.id} 
+              layout
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="relative overflow-hidden group border-b border-slate-50 last:border-0"
+            >
+              {/* Background Actions (Revealed via Drag) */}
+              <div className="absolute inset-0 bg-slate-50 flex items-center justify-end px-6 gap-3">
+                 <button onClick={() => handleDelete(t.id)} className="w-12 h-12 bg-rose-500 text-white rounded-2xl shadow-lg shadow-rose-200 flex items-center justify-center">
+                    <Trash2 className="w-6 h-6" />
+                 </button>
+                 <button onClick={() => printTransaction(t.id)} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-200 flex items-center justify-center">
+                    <Printer className="w-6 h-6" />
+                 </button>
               </div>
-              <div className="flex justify-between items-center bg-slate-50 p-3 rounded-xl mt-3">
-                <div className="text-[9px] text-slate-400 font-black uppercase tracking-widest leading-none">
-                  <div className="mb-1">{t.transaction_date}</div>
-                  <div className="flex items-center gap-1 text-indigo-500">
-                    <UserIcon className="w-3 h-3" />
-                    {t.collector_name || 'System / Admin'}
+
+              <motion.div 
+                drag="x"
+                dragConstraints={{ left: -140, right: 0 }}
+                dragElastic={0.1}
+                whileDrag={{ scale: 1.02 }}
+                className="p-5 hover:bg-slate-50/50 transition-colors relative z-10 bg-white"
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex items-center gap-3">
+                     <div className={cn(
+                       "w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm",
+                       t.type === 'pemasukan' ? "bg-emerald-50 text-emerald-600 shadow-emerald-100" : "bg-rose-50 text-rose-600 shadow-rose-100"
+                     )}>
+                       {t.type === 'pemasukan' ? <ArrowUpCircle className="w-6 h-6" /> : <ArrowDownCircle className="w-6 h-6" />}
+                     </div>
+                     <div>
+                       <div className="font-black text-slate-800 leading-tight text-sm">{t.customer_name || t.category}</div>
+                       <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">{t.customer_name ? t.category : t.description}</div>
+                     </div>
+                  </div>
+                  <div className="text-right">
+                    <div className={cn(
+                      "font-black tabular-nums text-sm",
+                      t.type === 'pemasukan' ? "text-emerald-600" : "text-rose-600"
+                    )}>
+                      {t.type === 'pemasukan' ? '+' : '-'} {new Intl.NumberFormat('id-ID').format(t.amount)}
+                    </div>
+                    <div className={cn(
+                      "text-[8px] font-black uppercase px-2 py-0.5 rounded-full mt-1 inline-block",
+                      t.status === 'confirmed' ? "bg-emerald-50 text-emerald-600" : 
+                      t.status === 'deposited' ? "bg-amber-50 text-amber-600" :
+                      "bg-slate-50 text-slate-400"
+                    )}>
+                      {t.status}
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <button onClick={() => printTransaction(t.id)} className="p-2 transition-all active:scale-90"><Printer className="w-4 h-4 text-slate-300" /></button>
-                  <button onClick={() => handleDelete(t.id)} className="p-2 transition-all active:scale-90"><Trash2 className="w-4 h-4 text-rose-300" /></button>
+                
+                <div className="flex justify-between items-center mt-4 pt-3 border-t border-slate-50">
+                  <div className="text-[9px] text-slate-400 font-black uppercase tracking-widest flex items-center gap-3">
+                    <span className="flex items-center gap-1"><Calendar className="w-3" /> {t.transaction_date.split('-').reverse().join('/')}</span>
+                    <span className="flex items-center gap-1 text-indigo-500">
+                      <UserIcon className="w-3" />
+                      {t.collector_name?.split(' ')[0] || 'ADMIN'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[8px] font-black text-slate-300 uppercase tracking-tighter">Swipe Left for Actions</span>
+                    <ArrowLeft className="w-3 h-3 text-slate-300 animate-pulse" />
+                  </div>
                 </div>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
           ))}
+          {transactions.length === 0 && (
+            <div className="py-20 text-center text-slate-300 italic font-medium uppercase tracking-[0.2em] text-[10px]">
+              Empty Transaction History
+            </div>
+          )}
         </div>
 
         {/* Desktop View: Table */}
@@ -903,9 +979,12 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger }: {
   const [customerPayments, setCustomerPayments] = useState<any[]>([]);
   const [selectedPeriods, setSelectedPeriods] = useState<string[]>([]);
   const [amount, setAmount] = useState<string>('');
+  const [collectorId, setCollectorId] = useState<string>('');
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [isOldInQuickAdd, setIsOldInQuickAdd] = useState(false);
+  const [pAmount, setPAmount] = useState('');
 
   const printTransaction = async (id: number) => {
     try {
@@ -936,14 +1015,16 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger }: {
 
   const fetchInitialData = async () => {
     try {
-      const [transRes, custRes, packRes] = await Promise.all([
+      const [transRes, custRes, packRes, userRes] = await Promise.all([
         fetch('/api/transactions', { headers: { 'x-user-id': String(user.id) } }),
         fetch('/api/customers', { headers: { 'x-user-id': String(user.id) } }),
-        fetch('/api/packets', { headers: { 'x-user-id': String(user.id) } })
+        fetch('/api/packets', { headers: { 'x-user-id': String(user.id) } }),
+        fetch('/api/users', { headers: { 'x-user-id': String(user.id) } })
       ]);
       if (transRes.ok) setTransactions(await transRes.json());
       if (custRes.ok) setCustomers(await custRes.json());
       if (packRes.ok) setPackets(await packRes.json());
+      if (userRes.ok) setUsers(await userRes.json());
     } catch (err) {
       console.error('Failed to fetch initial collector data:', err);
     }
@@ -994,7 +1075,8 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger }: {
           setCustomerPayments(data);
           const unpaid = getUnpaidMonthsList(data);
           if (unpaid.length > 0) {
-            setSelectedPeriods([unpaid[unpaid.length - 1]]);
+            // Default to the EARLIEST unpaid month (bulan setelah pembayaran terakhir)
+            setSelectedPeriods([unpaid[0]]);
           } else {
             setSelectedPeriods([]);
           }
@@ -1352,14 +1434,12 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger }: {
                 )}
               </div>
               <div className="relative">
-                <input 
+                <FormattedNumberInput 
                   name="amount" 
-                  type="number" 
                   required 
                   value={amount}
-                  readOnly={selectedCategory === 'Tagihan Bulanan'}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="Contoh: 150000"
+                  onChange={(val) => setAmount(val)}
+                  placeholder="Contoh: 150.000"
                   className={cn(
                     "w-full text-slate-900 border-none px-4 py-3 rounded-xl focus:ring-4 transition-all font-bold text-lg",
                     selectedCategory === 'Tagihan Bulanan' 
@@ -1405,41 +1485,51 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger }: {
           </h3>
         </div>
         <div className="space-y-3">
-          {transactions.slice(0, 5).map((t) => (
+          {transactions.slice(0, 10).map((t) => (
             <motion.div 
               key={t.id} 
               layout
-              className="bg-white p-4 rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow group"
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="relative overflow-hidden bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-indigo-500/5 transition-all group"
             >
-              <div className="flex-1">
-                <p className="font-bold text-slate-800">{t.customer_name || t.category}</p>
-                <p className="text-xs text-slate-400 font-mono italic">{t.customer_name ? t.category : t.description}</p>
+              {/* Background Action (Revealed via Drag) */}
+              <div className="absolute inset-0 bg-indigo-50 flex items-center justify-end px-6 gap-3">
+                 <button onClick={() => printTransaction(t.id)} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-200 flex items-center justify-center">
+                    <Printer className="w-6 h-6" />
+                 </button>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <p className="text-emerald-600 font-bold">
-                    + {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(t.amount)}
-                  </p>
-                  <p className="text-[10px] text-slate-300 font-medium">{t.transaction_date}</p>
+
+              <motion.div 
+                drag="x"
+                dragConstraints={{ left: -80, right: 0 }}
+                dragElastic={0.1}
+                className="bg-white p-4 relative z-10"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      "w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg",
+                      t.type === 'pemasukan' ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
+                    )}>
+                      {t.type === 'pemasukan' ? <PlusCircle className="w-6 h-6" /> : <MinusCircle className="w-6 h-6" />}
+                    </div>
+                    <div>
+                      <p className="font-black text-slate-800 text-sm">{t.customer_name || t.category}</p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">{t.customer_name ? t.category : t.description}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={cn(
+                      "font-black text-sm tabular-nums",
+                      t.type === 'pemasukan' ? "text-emerald-600" : "text-rose-600"
+                    )}>
+                      {t.type === 'pemasukan' ? '+' : '-'} {new Intl.NumberFormat('id-ID').format(t.amount)}
+                    </p>
+                    <p className="text-[9px] text-slate-300 font-black uppercase tracking-tighter">{t.transaction_date}</p>
+                  </div>
                 </div>
-                <button 
-                  onClick={() => printTransaction(t.id)}
-                  disabled={isPrinting}
-                  className="p-2 bg-slate-50 text-slate-400 hover:text-indigo-600 rounded-lg group-hover:scale-110 transition-all disabled:opacity-50"
-                  title="Cetak Struk"
-                >
-                  <Printer className="w-4 h-4" />
-                </button>
-                {t.customer_id && (
-                  <button 
-                    onClick={() => handleDownloadInvoice(t.id)}
-                    className="p-2 bg-slate-50 text-slate-400 hover:text-emerald-600 rounded-lg group-hover:scale-110 transition-all ml-1"
-                    title="Download PDF"
-                  >
-                    <Download className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
+              </motion.div>
             </motion.div>
           ))}
           {transactions.length === 0 && (
@@ -1685,31 +1775,36 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger }: {
                    </label>
                 </div>
 
-                <div className="space-y-6 bg-slate-100 p-6 rounded-3xl hidden has-[input[name='pay_now']:checked]:block border-2 border-indigo-100 animate-in fade-in slide-in-from-top-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Kategori</label>
-                      <select name="p_category" className="w-full bg-white border-none h-12 px-4 rounded-xl font-bold text-slate-700 outline-none">
-                        <option value="Pemasangan Baru">Pemasangan Baru</option>
-                        <option value="Tagihan Bulanan">Tagihan Bulanan</option>
-                      </select>
+                  <div className="space-y-6 bg-slate-100 p-6 rounded-3xl hidden has-[input[name='pay_now']:checked]:block border-2 border-indigo-100 animate-in fade-in slide-in-from-top-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Kategori</label>
+                        <select name="p_category" className="w-full bg-white border-none h-12 px-4 rounded-xl font-bold text-slate-700 outline-none">
+                          <option value="Pemasangan Baru">Pemasangan Baru</option>
+                          <option value="Tagihan Bulanan">Tagihan Bulanan</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Periode</label>
+                        <select 
+                          name="p_period" 
+                          defaultValue={new Date().toISOString().slice(0, 7)}
+                          className="w-full bg-white border-none h-12 px-4 rounded-xl font-bold text-slate-700 outline-none"
+                        >
+                          {getBillingPeriods().map(p => <option key={p} value={p}>{p}</option>)}
+                        </select>
+                      </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Periode</label>
-                      <select 
-                        name="p_period" 
-                        defaultValue={new Date().toISOString().slice(0, 7)}
-                        className="w-full bg-white border-none h-12 px-4 rounded-xl font-bold text-slate-700 outline-none"
-                      >
-                        {getBillingPeriods().map(p => <option key={p} value={p}>{p}</option>)}
-                      </select>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Total Bayar (Rp)</label>
+                      <FormattedNumberInput 
+                        name="p_amount" 
+                        onChange={(val) => setPAmount(val)}
+                        value={pAmount} 
+                        className="w-full bg-white border-none h-16 px-6 rounded-2xl font-black text-2xl text-slate-800 outline-none tabular-nums" 
+                      />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Total Bayar (Rp)</label>
-                    <input name="p_amount" type="number" className="w-full bg-white border-none h-16 px-6 rounded-2xl font-black text-2xl text-slate-800 outline-none tabular-nums" />
-                  </div>
-                </div>
 
                 <div className="flex gap-4 pt-4 bg-white sticky bottom-0">
                   <button type="button" onClick={() => setShowQuickAdd(false)} className="flex-1 py-4 text-slate-400 font-black text-xs uppercase tracking-widest hover:text-slate-600 active:scale-95 transition-all">Batal</button>
@@ -1915,18 +2010,21 @@ function Receipt({ transaction, userName, settings }: { transaction: Transaction
 function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigger?: number }) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [packets, setPackets] = useState<Packet[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [isOldCustomer, setIsOldCustomer] = useState(false);
 
   const fetchData = async () => {
     try {
-      const [custRes, packRes] = await Promise.all([
+      const [custRes, packRes, userRes] = await Promise.all([
         fetch('/api/customers', { headers: { 'x-user-id': String(user.id) } }),
-        fetch('/api/packets', { headers: { 'x-user-id': String(user.id) } })
+        fetch('/api/packets', { headers: { 'x-user-id': String(user.id) } }),
+        fetch('/api/users', { headers: { 'x-user-id': String(user.id) } })
       ]);
       if (custRes.ok) setCustomers(await custRes.json());
       if (packRes.ok) setPackets(await packRes.json());
+      if (userRes.ok) setUsers(await userRes.json());
     } catch (err) {
       console.error('Failed to fetch customer management data:', err);
     }
@@ -2075,6 +2173,20 @@ function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigg
                           <input name="phone" defaultValue={editingCustomer?.phone} placeholder="62812345678" className="w-full bg-slate-50 border-none h-12 pl-12 pr-4 rounded-xl font-bold text-slate-700 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all" />
                        </div>
                     </div>
+                    <div className="space-y-2">
+                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Assigned Collector</label>
+                       <div className="relative group">
+                          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500">
+                             <UsersIcon className="w-4 h-4" />
+                          </div>
+                          <select name="collector_id" defaultValue={editingCustomer?.collector_id} className="w-full bg-slate-50 border-none h-12 pl-12 pr-4 rounded-xl font-bold text-slate-700 focus:ring-4 focus:ring-indigo-500/10 outline-none appearance-none transition-all">
+                             <option value="">-- PILIH PENAGIH --</option>
+                             {users.filter(u => u.role === 'penagih').map(u => (
+                               <option key={u.id} value={u.id}>{u.name}</option>
+                             ))}
+                          </select>
+                       </div>
+                    </div>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2157,11 +2269,19 @@ function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigg
                 <Phone className="w-3 h-3 text-slate-400" /> {c.phone || 'No phone'}
               </p>
               <p className="text-xs text-slate-400 italic mb-2">{c.address || 'No address'}</p>
-              <div className="bg-slate-50 px-3 py-2 rounded-xl flex items-center justify-between border border-dashed border-slate-200">
-                <span className="text-[10px] font-bold text-slate-400 uppercase">Input Tunggakan Mulai</span>
-                <span className="text-[10px] font-black text-indigo-500 flex items-center gap-1">
-                  <Calendar className="w-3 h-3" /> {c.created_at?.slice(0, 7) || 'Manual'}
-                </span>
+              <div className="bg-slate-50 px-3 py-2 rounded-xl flex flex-col gap-2 border border-dashed border-slate-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase leading-none">Mulai Tagihan</span>
+                  <span className="text-[10px] font-black text-indigo-500 flex items-center gap-1 leading-none">
+                    <Calendar className="w-3 h-3" /> {c.created_at?.slice(0, 7) || 'Manual'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between border-t border-slate-100 pt-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase leading-none">Penagih</span>
+                  <span className="text-[10px] font-black text-slate-700 flex items-center gap-1 leading-none">
+                    <UserIcon className="w-3 h-3" /> {c.collector_name || 'Unassigned'}
+                  </span>
+                </div>
               </div>
             </div>
             <div className="mt-4 pt-4 border-t border-slate-50 flex justify-between items-center">
@@ -2189,6 +2309,7 @@ function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigg
 function PacketManagement({ user, refreshTrigger }: { user: User, refreshTrigger?: number }) {
   const [packets, setPackets] = useState<Packet[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [price, setPrice] = useState('');
 
   const fetchPackets = async () => {
     try {
@@ -2258,7 +2379,14 @@ function PacketManagement({ user, refreshTrigger }: { user: User, refreshTrigger
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-white p-6 rounded-2xl border border-slate-200">
           <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input name="name" placeholder="Nama Paket (mis: 10Mbps Gold)" className="input-field" required />
-            <input name="price" type="number" placeholder="Harga Bulanan (Rp)" className="input-field" required />
+            <FormattedNumberInput 
+              name="price"
+              value={price}
+              onChange={(val) => setPrice(val)}
+              placeholder="Harga Bulanan (Rp)" 
+              className="input-field" 
+              required 
+            />
             <button type="submit" className="md:col-span-2 btn-primary">Simpan Paket</button>
           </form>
         </motion.div>
@@ -2444,6 +2572,40 @@ function SettingsManagement({ user, deferredPrompt, onInstall, refreshTrigger }:
            </button>
         </div>
       </form>
+
+      <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+        <div className="p-8 space-y-6">
+          <h3 className="font-black text-slate-800 uppercase tracking-widest text-xs flex items-center gap-2">
+            <Printer className="w-4 h-4 text-amber-500" /> Thermal Printer Integration
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Connection Status</p>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center">
+                  <WifiOff className="w-5 h-5" />
+                </div>
+                <div>
+                   <p className="text-sm font-bold text-slate-700">Printer Disconnected</p>
+                   <p className="text-[10px] text-slate-400 font-medium">Buka menu browser pada HP dan pilih 'Print' atau 'Share to Printer' untuk mencoba koneksi.</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col justify-center gap-3">
+              <button 
+                onClick={() => window.print()}
+                className="bg-white border-2 border-slate-200 text-slate-600 font-black py-4 rounded-2xl hover:bg-slate-50 transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-widest"
+              >
+                <Printer className="w-4 h-4" /> Test Direct Print
+              </button>
+              <p className="text-center text-[9px] text-slate-400 font-bold uppercase tracking-widest leading-loose">
+                Supports: 58mm / 80mm ESC/POS Thermal Printers<br/>
+                Via Bluetooth / USB / Network
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div className="bg-amber-50 border border-amber-100 rounded-3xl p-6 flex flex-col md:flex-row items-center gap-6">
         <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-amber-500 shadow-sm border border-amber-100 flex-shrink-0">
