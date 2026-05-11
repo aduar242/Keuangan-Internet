@@ -26,6 +26,7 @@ import {
   RefreshCw,
   ArrowRightCircle,
   Settings,
+  UserPlus,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Transaction, DashboardStats, Customer, Packet, AppSettings } from './types';
@@ -53,6 +54,26 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [printerStatus, setPrinterStatus] = useState<'not_connected' | 'checking' | 'ready'>('not_connected');
+  const [receiptToPreview, setReceiptToPreview] = useState<{ transaction: Transaction; userName: string } | null>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
 
   const fetchSettings = async (userId: number) => {
     try {
@@ -187,6 +208,19 @@ export default function App() {
           <SidebarLink active={activeTab === 'history'} onClick={() => setActiveTab('history')} icon={<History className="w-5 h-5" />} label="Riwayat" />
         </nav>
 
+        {deferredPrompt && (
+          <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl p-4 shadow-xl shadow-indigo-200 mb-4 mx-2 border border-indigo-400/30">
+            <p className="text-[10px] font-black text-indigo-100 uppercase tracking-widest mb-1">Dapatkan Akses Cepat</p>
+            <p className="text-xs font-bold text-white mb-3">Install Aplikasi ke Beranda</p>
+            <button 
+              onClick={handleInstallClick}
+              className="w-full py-2.5 bg-white text-indigo-600 font-black text-[10px] rounded-xl shadow-lg active:scale-95 transition-all uppercase tracking-widest"
+            >
+              INSTALL APP
+            </button>
+          </div>
+        )}
+
         <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700/50 mb-4 mx-2">
           <div className="flex items-center gap-3 mb-3">
             <div className={cn(
@@ -261,6 +295,30 @@ export default function App() {
           </button>
         </div>
 
+        {deferredPrompt && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="md:hidden mb-6 bg-indigo-600 rounded-2xl p-4 flex items-center justify-between shadow-lg shadow-indigo-100 border border-indigo-400/50"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-white">
+                <Download className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-white font-black text-sm tracking-tight">Install App</p>
+                <p className="text-indigo-100 text-[10px] font-bold">Akses cepat ke peranti anda</p>
+              </div>
+            </div>
+            <button 
+              onClick={handleInstallClick}
+              className="bg-white text-indigo-600 px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all"
+            >
+              PASANG
+            </button>
+          </motion.div>
+        )}
+
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -271,19 +329,19 @@ export default function App() {
           >
             {user.role === 'admin' ? (
               <>
-                {activeTab === 'dashboard' && <AdminDashboard user={user} settings={settings} />}
+                {activeTab === 'dashboard' && <AdminDashboard user={user} settings={settings} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
                 {activeTab === 'customers' && <CustomerManagement user={user} />}
                 {activeTab === 'packets' && <PacketManagement user={user} />}
                 {activeTab === 'users' && <UserManagement user={user} />}
                 {activeTab === 'reports' && <PaymentReport user={user} />}
                 {activeTab === 'settings' && <SettingsManagement user={user} />}
-                {activeTab === 'history' && <AdminDashboard user={user} settings={settings} />}
+                {activeTab === 'history' && <AdminDashboard user={user} settings={settings} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
               </>
             ) : (
               <>
-                {activeTab === 'dashboard' && <CollectorDashboard user={user} settings={settings} />}
+                {activeTab === 'dashboard' && <CollectorDashboard user={user} settings={settings} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
                 {activeTab === 'customers' && <CustomerManagement user={user} />}
-                {activeTab === 'history' && <CollectorDashboard user={user} settings={settings} />}
+                {activeTab === 'history' && <CollectorDashboard user={user} settings={settings} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
               </>
             )}
           </motion.div>
@@ -292,6 +350,17 @@ export default function App() {
         <MobileNav activeTab={activeTab} setActiveTab={setActiveTab} user={user} />
       </main>
 
+      {/* Global Modals */}
+      <AnimatePresence>
+        {receiptToPreview && (
+          <ReceiptPreviewModal 
+            transaction={receiptToPreview.transaction} 
+            userName={receiptToPreview.userName} 
+            settings={settings} 
+            onClose={() => setReceiptToPreview(null)} 
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -446,13 +515,12 @@ function LoginScreen({ onLogin }: { onLogin: (e: React.FormEvent<HTMLFormElement
   );
 }
 
-function AdminDashboard({ user, settings }: { user: User, settings: AppSettings | null }) {
+function AdminDashboard({ user, settings, onShowReceipt }: { user: User, settings: AppSettings | null, onShowReceipt?: (t: Transaction, u: string) => void }) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [pendingDeposits, setPendingDeposits] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [transactionToPrint, setTransactionToPrint] = useState<Transaction | null>(null);
   const [isPrinting, setIsPrinting] = useState(false);
 
   const printTransaction = async (id: number) => {
@@ -463,11 +531,13 @@ function AdminDashboard({ user, settings }: { user: User, settings: AppSettings 
       });
       if (res.ok) {
         const trans = await res.json();
-        setTransactionToPrint(trans);
-        setTimeout(() => {
+        if (onShowReceipt) {
+          onShowReceipt(trans, user.name);
+        } else {
+          // Fallback if global modal not available
           window.print();
-          setIsPrinting(false);
-        }, 500);
+        }
+        setIsPrinting(false);
       } else {
         setIsPrinting(false);
       }
@@ -778,8 +848,6 @@ function AdminDashboard({ user, settings }: { user: User, settings: AppSettings 
       </div>
 
 
-      <Receipt transaction={transactionToPrint} userName={user.name} settings={settings} />
-
       <AnimatePresence>
         {showModal && (
           <TransactionModal 
@@ -794,7 +862,7 @@ function AdminDashboard({ user, settings }: { user: User, settings: AppSettings 
   );
 }
 
-function CollectorDashboard({ user, settings }: { user: User, settings: AppSettings | null }) {
+function CollectorDashboard({ user, settings, onShowReceipt }: { user: User, settings: AppSettings | null, onShowReceipt?: (t: Transaction, u: string) => void }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [packets, setPackets] = useState<Packet[]>([]);
@@ -807,7 +875,6 @@ function CollectorDashboard({ user, settings }: { user: User, settings: AppSetti
   const [selectedPeriods, setSelectedPeriods] = useState<string[]>([]);
   const [amount, setAmount] = useState<string>('');
   const [loading, setLoading] = useState(false);
-  const [transactionToPrint, setTransactionToPrint] = useState<Transaction | null>(null);
   const [isPrinting, setIsPrinting] = useState(false);
   const [isOldInQuickAdd, setIsOldInQuickAdd] = useState(false);
 
@@ -819,11 +886,12 @@ function CollectorDashboard({ user, settings }: { user: User, settings: AppSetti
       });
       if (res.ok) {
         const trans = await res.json();
-        setTransactionToPrint(trans);
-        setTimeout(() => {
+        if (onShowReceipt) {
+          onShowReceipt(trans, user.name);
+        } else {
           window.print();
-          setIsPrinting(false);
-        }, 500);
+        }
+        setIsPrinting(false);
       } else {
         setIsPrinting(false);
       }
@@ -1057,12 +1125,12 @@ function CollectorDashboard({ user, settings }: { user: User, settings: AppSetti
           const savedTrans = await res.json();
           const customer = customers.find(c => c.id === data.customer_id);
           const printObj = { ...savedTrans, customer_name: customer?.name, billing_period: billingPeriods.join(', ') };
-          setTransactionToPrint(printObj);
           
-          // Small delay to ensure state is updated before print
-          setTimeout(() => {
+          if (onShowReceipt) {
+            onShowReceipt(printObj, user.name);
+          } else {
             window.print();
-          }, 500);
+          }
         } else {
           const errorData = await res.json();
           alert(errorData.error || 'Gagal menyimpan transaksi.');
@@ -1331,7 +1399,7 @@ function CollectorDashboard({ user, settings }: { user: User, settings: AppSetti
                   className="p-2 bg-slate-50 text-slate-400 hover:text-indigo-600 rounded-lg group-hover:scale-110 transition-all disabled:opacity-50"
                   title="Cetak Struk"
                 >
-                  <Printer className={cn("w-4 h-4", isPrinting && transactionToPrint?.id === t.id && "animate-pulse")} />
+                  <Printer className="w-4 h-4" />
                 </button>
                 {t.customer_id && (
                   <button 
@@ -1426,35 +1494,40 @@ function CollectorDashboard({ user, settings }: { user: User, settings: AppSetti
         </div>
       </div>
 
-      <Receipt transaction={transactionToPrint} userName={user.name} settings={settings} />
-
       <AnimatePresence>
         {showQuickAdd && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
             <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="bg-white rounded-3xl p-8 w-full max-w-lg shadow-2xl overflow-y-auto max-h-[90vh]"
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative bg-slate-50 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden"
             >
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-slate-800">Tambah Pelanggan Cepat</h3>
-                <div className="flex bg-slate-100 p-1 rounded-lg scale-90">
+              <div className="bg-white p-6 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+                    <UserPlus className="w-5 h-5 text-indigo-500" /> Registrasi Cepat
+                  </h3>
+                  <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Input Pelanggan & Bayar Sekaligus</p>
+                </div>
+                <div className="flex bg-slate-100 p-1.5 rounded-xl scale-90">
                   <button 
                     type="button"
                     onClick={() => setIsOldInQuickAdd(false)}
-                    className={cn("px-3 py-1.5 text-[9px] font-black rounded-md transition-all", !isOldInQuickAdd ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500")}
+                    className={cn("px-4 py-2 text-[10px] font-black rounded-lg transition-all uppercase tracking-widest", !isOldInQuickAdd ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500")}
                   >
                     BARU
                   </button>
                   <button 
                     type="button"
                     onClick={() => setIsOldInQuickAdd(true)}
-                    className={cn("px-3 py-1.5 text-[9px] font-black rounded-md transition-all", isOldInQuickAdd ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500")}
+                    className={cn("px-4 py-2 text-[10px] font-black rounded-lg transition-all uppercase tracking-widest", isOldInQuickAdd ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500")}
                   >
-                    LAMA
+                    MIGRASI
                   </button>
                 </div>
               </div>
+
               <form onSubmit={async (e) => {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
@@ -1490,12 +1563,15 @@ function CollectorDashboard({ user, settings }: { user: User, settings: AppSetti
                     
                     if (transRes.ok) {
                       const newTrans = await transRes.json();
-                      setTransactionToPrint(newTrans);
-                      // Slight delay to allow modal close before print
-                      setTimeout(() => {
+                      const cust = customers.find(c => c.id === newTrans.customer_id) || newCust;
+                      const printObj = { ...newTrans, customer_name: cust.name };
+                      
+                      if (onShowReceipt) {
+                        onShowReceipt(printObj, user.name);
+                      } else {
                         window.print();
                         fetchInitialData();
-                      }, 500);
+                      }
                     }
                   }
 
@@ -1503,99 +1579,221 @@ function CollectorDashboard({ user, settings }: { user: User, settings: AppSetti
                   await fetchInitialData();
                   setSelectedCustomerId(String(newCust.id));
                 }
-              }} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Nama Lengkap</label>
-                    <input name="name" required className="w-full border-2 border-slate-100 rounded-xl px-4 py-3 focus:border-indigo-500 outline-none transition-all" />
+              }} className="p-8 space-y-6 max-h-[70vh] overflow-y-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nama Lengkap</label>
+                    <div className="relative group">
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500">
+                        <UserIcon className="w-4 h-4" />
+                      </div>
+                      <input name="name" required className="w-full bg-white border border-slate-100 h-14 pl-12 pr-4 rounded-2xl font-bold text-slate-700 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all" />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Pilih Paket</label>
-                    <select 
-                      name="packet" 
-                      required 
-                      className="w-full border-2 border-slate-100 rounded-xl px-4 py-3 focus:border-indigo-500 outline-none transition-all"
-                      onChange={(e) => {
-                        const priceMatch = e.target.value.match(/Rp\s?([\d.,]+)/);
-                        if (priceMatch) {
-                          const numericPrice = priceMatch[1].replace(/[.,]/g, '');
-                          const form = e.target.closest('form');
-                          if (form) {
-                            const amountInput = form.querySelector('[name="p_amount"]') as HTMLInputElement;
-                            if (amountInput) amountInput.value = numericPrice;
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Pilih Paket</label>
+                    <div className="relative group">
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500">
+                        <BarChart3 className="w-4 h-4" />
+                      </div>
+                      <select 
+                        name="packet" 
+                        required 
+                        className="w-full bg-white border border-slate-100 h-14 pl-12 pr-4 rounded-2xl font-bold text-slate-700 focus:ring-4 focus:ring-indigo-500/10 outline-none appearance-none transition-all"
+                        onChange={(e) => {
+                          const priceMatch = e.target.value.match(/Rp\s?([\d.,]+)/);
+                          if (priceMatch) {
+                            const numericPrice = priceMatch[1].replace(/[.,]/g, '');
+                            const form = e.target.closest('form');
+                            if (form) {
+                              const amountInput = form.querySelector('[name="p_amount"]') as HTMLInputElement;
+                              if (amountInput) amountInput.value = numericPrice;
+                            }
                           }
-                        }
-                      }}
-                    >
-                      <option value="">-- Pilih Paket --</option>
-                      {packets.map(p => (
-                        <option key={p.id} value={`${p.name} - Rp ${p.price.toLocaleString()}`}>
-                          {p.name} (Rp {p.price.toLocaleString()})
-                        </option>
-                      ))}
-                    </select>
+                        }}
+                      >
+                        <option value="">-- PAKET --</option>
+                        {packets.map(p => (
+                          <option key={p.id} value={`${p.name} - Rp ${p.price.toLocaleString()}`}>
+                            {p.name} (Rp {p.price.toLocaleString()})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Alamat</label>
-                  <input name="address" className="w-full border-2 border-slate-100 rounded-xl px-4 py-3 focus:border-indigo-500 outline-none transition-all" />
+                
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Alamat Pemasangan</label>
+                  <div className="relative group">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500">
+                      <LayoutDashboard className="w-4 h-4" />
+                    </div>
+                    <input name="address" className="w-full bg-white border border-slate-100 h-14 pl-12 pr-4 rounded-2xl font-bold text-slate-700 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all" />
+                  </div>
                 </div>
 
                 {isOldInQuickAdd && (
-                  <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100/50">
-                    <label className="block text-[10px] font-bold text-indigo-400 uppercase mb-1">Bulan Bergabung (Join Month)</label>
+                  <div className="bg-indigo-600 rounded-3xl p-6 text-white shadow-xl shadow-indigo-100">
+                    <label className="block text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-3">Historical Join Date</label>
                     <input 
                       name="created_at" 
                       type="month" 
                       required 
                       defaultValue={new Date().toISOString().slice(0, 7)}
-                      className="w-full bg-white border-2 border-indigo-100 rounded-xl px-4 py-2 focus:border-indigo-500 outline-none transition-all" 
+                      className="w-full bg-indigo-500 border border-indigo-400 h-14 px-4 rounded-xl font-black text-white outline-none focus:ring-4 focus:ring-white/20 transition-all" 
                     />
                   </div>
                 )}
 
                 <div className="pt-4 border-t border-slate-100">
-                   <label className="flex items-center gap-3 cursor-pointer group">
-                      <input type="checkbox" name="pay_now" className="w-5 h-5 rounded border-2 border-slate-200 text-indigo-600 focus:ring-indigo-500" />
-                      <span className="text-sm font-bold text-slate-700 group-hover:text-indigo-600 transition-colors">Catat Pembayaran Langsung?</span>
+                   <label className="flex items-center gap-4 cursor-pointer group bg-slate-100 p-4 rounded-2xl transition-all hover:bg-indigo-50">
+                      <input type="checkbox" name="pay_now" className="w-6 h-6 rounded-lg border-2 border-slate-300 text-indigo-600 focus:ring-indigo-500 transition-all" />
+                      <div>
+                        <span className="text-sm font-black text-slate-700 block uppercase tracking-tight">Catat Pembayaran Langsung</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sangat direkomendasikan untuk aktivasi instant</span>
+                      </div>
                    </label>
                 </div>
 
-                <div className="space-y-4 bg-slate-50 p-4 rounded-2xl hidden has-[input[name='pay_now']:checked]:block">
+                <div className="space-y-6 bg-slate-100 p-6 rounded-3xl hidden has-[input[name='pay_now']:checked]:block border-2 border-indigo-100 animate-in fade-in slide-in-from-top-4">
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Kategori</label>
-                      <select name="p_category" className="w-full bg-white border-2 border-white rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Kategori</label>
+                      <select name="p_category" className="w-full bg-white border-none h-12 px-4 rounded-xl font-bold text-slate-700 outline-none">
                         <option value="Pemasangan Baru">Pemasangan Baru</option>
                         <option value="Tagihan Bulanan">Tagihan Bulanan</option>
                       </select>
                     </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Bulan</label>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Periode</label>
                       <select 
                         name="p_period" 
                         defaultValue={new Date().toISOString().slice(0, 7)}
-                        className="w-full bg-white border-2 border-white rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500"
+                        className="w-full bg-white border-none h-12 px-4 rounded-xl font-bold text-slate-700 outline-none"
                       >
                         {getBillingPeriods().map(p => <option key={p} value={p}>{p}</option>)}
                       </select>
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Jumlah Bayar (Rp)</label>
-                    <input name="p_amount" type="number" className="w-full bg-white border-2 border-white rounded-lg px-3 py-2 text-sm font-bold outline-none focus:border-indigo-500" />
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Total Bayar (Rp)</label>
+                    <input name="p_amount" type="number" className="w-full bg-white border-none h-16 px-6 rounded-2xl font-black text-2xl text-slate-800 outline-none tabular-nums" />
                   </div>
                 </div>
 
-                <div className="flex gap-3 pt-6">
-                  <button type="button" onClick={() => setShowQuickAdd(false)} className="flex-1 px-4 py-3 text-slate-400 font-bold hover:text-slate-600">Batal</button>
-                  <button type="submit" className="flex-1 bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-black transition-all">Simpan</button>
+                <div className="flex gap-4 pt-4 bg-white sticky bottom-0">
+                  <button type="button" onClick={() => setShowQuickAdd(false)} className="flex-1 py-4 text-slate-400 font-black text-xs uppercase tracking-widest hover:text-slate-600 active:scale-95 transition-all">Batal</button>
+                  <button type="submit" className="flex-1 bg-indigo-600 hover:bg-black text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-200 active:scale-95 transition-all uppercase tracking-widest text-xs">Simpan & Proses</button>
                 </div>
               </form>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+function ReceiptPreviewModal({ transaction, userName, settings, onClose }: { transaction: Transaction, userName: string, settings: AppSettings | null, onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="absolute inset-0 bg-slate-900/80 backdrop-blur-md" 
+      />
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+        className="relative bg-slate-100 w-full max-w-sm rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+      >
+        <div className="p-6 bg-white flex items-center justify-between border-b border-slate-100">
+           <div>
+              <h3 className="font-black text-slate-800 tracking-tight flex items-center gap-2 uppercase text-sm">
+                <Printer className="w-4 h-4 text-indigo-500" /> Struk Digital
+              </h3>
+              <p className="text-[10px] font-bold text-slate-400 mt-0.5 uppercase tracking-widest leading-none">Review & Print Preview</p>
+           </div>
+           <button onClick={onClose} className="p-2 hover:bg-slate-50 rounded-xl text-slate-400 transition-colors">
+              <LogOut className="w-5 h-5 rotate-180" />
+           </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-8 flex justify-center bg-[#f8fafc]">
+           <div className="receipt-paper bg-white w-full max-w-[300px] shadow-[0_10px_30px_rgba(0,0,0,0.05)] p-6 font-sans text-slate-900 relative">
+              {/* Receipt Content Mirroring the Print View */}
+              <div className="text-center border-b border-slate-200 pb-4 mb-4">
+                 <h4 className="font-black text-sm uppercase leading-tight tracking-tighter">{settings?.company_name || 'NET CORE WIFI'}</h4>
+                 <p className="text-[8px] font-black text-slate-500 tracking-[0.2em] mt-1">PRO BILLING SYSTEM</p>
+                 <p className="text-[7px] text-slate-400 mt-1 max-w-[150px] mx-auto">{settings?.company_address || 'Jakarta Selatan'}</p>
+                 <div className="mt-2 text-[8px] bg-slate-900 text-white rounded-full px-2 py-0.5 inline-block font-bold">BUKTI BAYAR SAH</div>
+              </div>
+
+              <div className="space-y-3 text-[10px]">
+                 <div className="flex justify-between border-b border-slate-50 pb-2">
+                    <span className="text-[7px] font-bold text-slate-400 uppercase">No. Struk</span>
+                    <span className="font-black">#{String(transaction.id).padStart(8, '0')}</span>
+                 </div>
+                 <div className="flex justify-between">
+                    <span className="text-[7px] font-bold text-slate-400 uppercase">Pelanggan</span>
+                    <span className="font-black uppercase truncate ml-4">{transaction.customer_name || 'Umum'}</span>
+                 </div>
+                 <div className="flex justify-between">
+                    <span className="text-[7px] font-bold text-slate-400 uppercase">Layanan</span>
+                    <span className="font-bold text-right italic">{transaction.category}</span>
+                 </div>
+                 {transaction.billing_period && (
+                    <div className="bg-indigo-50/50 p-2 rounded-lg flex justify-between items-center border border-indigo-100/50">
+                       <span className="text-[7px] font-bold text-indigo-400 uppercase">Periode</span>
+                       <span className="font-black text-indigo-600 bg-white px-1.5 py-0.5 rounded shadow-sm text-[9px]">{transaction.billing_period}</span>
+                    </div>
+                 )}
+                 <div className="pt-2 border-t border-slate-100">
+                    <div className="flex justify-between items-center mb-1">
+                       <span className="text-[8px] font-bold text-slate-400 uppercase">Jumlah Bayar</span>
+                       <span className="font-bold">Rp {transaction.amount.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-lg font-black tracking-tighter border-t border-slate-900 pt-1 mt-1">
+                       <span className="text-[9px] uppercase">TOTAL</span>
+                       <span>Rp {transaction.amount.toLocaleString()}</span>
+                    </div>
+                 </div>
+              </div>
+
+              <div className="mt-6 text-center">
+                 <div className="inline-block border border-indigo-600 text-indigo-600 px-3 py-1 rounded-full text-[8px] font-black uppercase mb-3">LUNAS ✅</div>
+                 <p className="text-[7px] text-slate-400 font-medium leading-relaxed italic">
+                    "{settings?.receipt_footer || 'Terima kasih telah berlangganan.'}"
+                 </p>
+                 <div className="mt-4 pt-4 border-t border-dashed border-slate-200">
+                    <p className="text-[6px] text-slate-300 uppercase tracking-widest font-mono">Core-Tech Enterprise v2.4</p>
+                 </div>
+              </div>
+           </div>
+        </div>
+
+        <div className="p-6 bg-white border-t border-slate-100 flex gap-4">
+           <button 
+             onClick={onClose}
+             className="flex-1 py-4 text-slate-400 font-black text-xs uppercase tracking-widest hover:text-slate-600 active:scale-95 transition-all"
+           >
+             Tutup
+           </button>
+           <button 
+             onClick={() => { window.print(); }}
+             className="flex-1 bg-indigo-600 hover:bg-black text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-200 active:scale-95 transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-widest"
+           >
+             <Printer className="w-4 h-4" /> Cetak Thermal
+           </button>
+        </div>
+      </motion.div>
+
+      {/* Hidden container for window.print() */}
+      <Receipt transaction={transaction} userName={userName} settings={settings} />
     </div>
   );
 }
@@ -1781,82 +1979,133 @@ function CustomerManagement({ user }: { user: User }) {
         </button>
       </header>
 
-      {showForm && (
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="bg-white p-6 rounded-2xl border border-slate-200">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="font-bold text-slate-800">{editingCustomer ? 'Update Data Pelanggan' : 'Daftarkan Pelanggan'}</h3>
-            {!editingCustomer && (
-              <div className="flex bg-slate-100 p-1 rounded-lg">
-                <button 
-                  onClick={() => setIsOldCustomer(false)}
-                  className={cn("px-3 py-1.5 text-[10px] font-bold rounded-md transition-all", !isOldCustomer ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500")}
-                >
-                  PELANGGAN BARU
-                </button>
-                <button 
-                  onClick={() => setIsOldCustomer(true)}
-                  className={cn("px-3 py-1.5 text-[10px] font-bold rounded-md transition-all", isOldCustomer ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500")}
-                >
-                  PELANGGAN LAMA / MIGRASI
-                </button>
+      <AnimatePresence>
+        {showForm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => { setShowForm(false); setEditingCustomer(null); }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" 
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden"
+            >
+              <div className="p-8 bg-white border-b border-slate-100 flex items-center justify-between">
+                 <div>
+                    <h3 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+                       <UserIcon className="w-5 h-5 text-indigo-500" /> 
+                       {editingCustomer ? 'Update Data' : 'Registrasi Pelanggan'}
+                    </h3>
+                    <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest leading-none">Manajemen Database Pelanggan</p>
+                 </div>
+                 <button onClick={() => { setShowForm(false); setEditingCustomer(null); }} className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors">
+                    <LogOut className="w-5 h-5 rotate-180" />
+                 </button>
               </div>
-            )}
+
+              <div className="p-8 max-h-[70vh] overflow-y-auto">
+                {!editingCustomer && (
+                  <div className="flex bg-slate-100 p-1.5 rounded-2xl mb-8">
+                    <button 
+                      onClick={() => setIsOldCustomer(false)}
+                      className={cn("flex-1 py-3 text-[10px] font-black rounded-xl transition-all uppercase tracking-widest", !isOldCustomer ? "bg-white text-indigo-600 shadow-lg" : "text-slate-500")}
+                    >
+                      PELANGGAN BARU
+                    </button>
+                    <button 
+                      onClick={() => setIsOldCustomer(true)}
+                      className={cn("flex-1 py-3 text-[10px] font-black rounded-xl transition-all uppercase tracking-widest", isOldCustomer ? "bg-white text-indigo-600 shadow-lg" : "text-slate-500")}
+                    >
+                      PELANGGAN LAMA / MIGRASI
+                    </button>
+                  </div>
+                )}
+                
+                <form onSubmit={handleAdd} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Identity Name</label>
+                      <div className="relative group">
+                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500">
+                            <UserIcon className="w-4 h-4" />
+                         </div>
+                         <input name="name" defaultValue={editingCustomer?.name} placeholder="Nama Pelanggan..." className="w-full bg-slate-50 border-none h-12 pl-12 pr-4 rounded-xl font-bold text-slate-700 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all" required />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Contact Access</label>
+                       <div className="relative group">
+                          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500">
+                             <Phone className="w-4 h-4" />
+                          </div>
+                          <input name="phone" defaultValue={editingCustomer?.phone} placeholder="62812345678" className="w-full bg-slate-50 border-none h-12 pl-12 pr-4 rounded-xl font-bold text-slate-700 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all" />
+                       </div>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Assign Service Plan</label>
+                      <div className="relative group">
+                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500">
+                            <BarChart3 className="w-4 h-4" />
+                         </div>
+                         <select name="packet" defaultValue={editingCustomer?.packet} className="w-full bg-slate-50 border-none h-12 pl-12 pr-4 rounded-xl font-bold text-slate-700 focus:ring-4 focus:ring-indigo-500/10 outline-none appearance-none transition-all" required>
+                           <option value="">-- PILIH PAKET --</option>
+                           {packets.map(p => {
+                             const packetVal = `${p.name} - Rp ${p.price.toLocaleString()}`;
+                             return <option key={p.id} value={packetVal}>{p.name} (Rp {p.price.toLocaleString()})</option>;
+                           })}
+                         </select>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Installation Address</label>
+                      <div className="relative group">
+                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500">
+                            <LayoutDashboard className="w-4 h-4" />
+                         </div>
+                         <input name="address" defaultValue={editingCustomer?.address} placeholder="Gg. Mangga No. 5..." className="w-full bg-slate-50 border-none h-12 pl-12 pr-4 rounded-xl font-bold text-slate-700 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {(isOldCustomer || editingCustomer) && (
+                    <div className="bg-indigo-600 rounded-2xl p-6 text-white shadow-xl shadow-indigo-200">
+                      <label className="block text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-3">Historical Deployment (Join Date)</label>
+                      <div className="relative">
+                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-300">
+                            <Calendar className="w-5 h-5" />
+                         </div>
+                         <input 
+                           name="created_at" 
+                           type="month" 
+                           required
+                           defaultValue={editingCustomer?.created_at?.slice(0, 7) || new Date().toISOString().slice(0, 7)}
+                           className="w-full bg-indigo-500 border border-indigo-400 h-14 pl-12 pr-4 rounded-xl font-black text-white focus:ring-4 focus:ring-white/20 outline-none transition-all" 
+                         />
+                      </div>
+                      <p className="text-[10px] font-bold text-indigo-300 mt-3 italic leading-relaxed">Pilih bulan pertama kali pelanggan mulai berlangganan untuk tracking tunggakan otomatis secara presisi.</p>
+                    </div>
+                  )}
+
+                  <div className="flex gap-4 pt-4">
+                    <button type="button" onClick={() => { setShowForm(false); setEditingCustomer(null); }} className="flex-1 py-4 text-slate-400 font-black text-xs uppercase tracking-widest hover:text-slate-600 active:scale-95 transition-all">Batal</button>
+                    <button type="submit" className="flex-1 bg-indigo-600 hover:bg-black text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-200 active:scale-95 transition-all uppercase tracking-widest text-xs">
+                      {editingCustomer ? 'Simpan Perubahan' : 'Finalisasi Registrasi'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </motion.div>
           </div>
-          
-          <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Nama Pelanggan</label>
-                <input name="name" defaultValue={editingCustomer?.name} placeholder="Contoh: Budi Santoso" className="input-field" required />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">No HP / WA</label>
-                <input name="phone" defaultValue={editingCustomer?.phone} placeholder="6281..." className="input-field" />
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Pilih Paket</label>
-                <select name="packet" defaultValue={editingCustomer?.packet} className="input-field" required>
-                  <option value="">-- Pilih Paket --</option>
-                  {packets.map(p => {
-                    const packetVal = `${p.name} - Rp ${p.price.toLocaleString()}`;
-                    return <option key={p.id} value={packetVal}>{p.name} (Rp {p.price.toLocaleString()})</option>;
-                  })}
-                </select>
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Alamat</label>
-                <input name="address" defaultValue={editingCustomer?.address} placeholder="Nama Jalan / Blok" className="input-field" />
-              </div>
-            </div>
-
-            {(isOldCustomer || editingCustomer) && (
-              <div className="md:col-span-2 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100/50">
-                <label className="block text-[10px] font-bold text-indigo-400 uppercase mb-2">Bulan Bergabung (Join Date)</label>
-                <input 
-                  name="created_at" 
-                  type="month" 
-                  required
-                  defaultValue={editingCustomer?.created_at?.slice(0, 7) || new Date().toISOString().slice(0, 7)}
-                  className="input-field border-indigo-100 bg-white" 
-                />
-                <p className="text-[10px] text-indigo-400 mt-2">Pilih bulan pertama kali pelanggan mulai berlangganan untuk tracking tunggakan.</p>
-              </div>
-            )}
-
-            <div className="md:col-span-2 flex gap-3 pt-2">
-              <button type="submit" className="flex-1 btn-primary">
-                {editingCustomer ? 'Simpan Perubahan' : 'Daftarkan Pelanggan'}
-              </button>
-              {editingCustomer && (
-                <button type="button" onClick={() => { setShowForm(false); setEditingCustomer(null); }} className="btn-secondary">Batal</button>
-              )}
-            </div>
-          </form>
-        </motion.div>
-      )}
+        )}
+      </AnimatePresence>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {customers.map(c => (
@@ -2395,7 +2644,7 @@ function StatCard({ title, amount, icon, color, settings }: { title: string, amo
   );
 }
 
-function TransactionModal({ user, isAdmin, onClose, onSuccess }: { user: User, isAdmin: boolean, onClose: () => void, onSuccess: () => void }) {
+function TransactionModal({ user, isAdmin, onClose, onSuccess }: { user: User, isAdmin: boolean, onClose: () => void, onSuccess: (t: Transaction) => void }) {
   const [type, setType] = useState<'pemasukan' | 'pengeluaran'>('pemasukan');
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -2407,7 +2656,7 @@ function TransactionModal({ user, isAdmin, onClose, onSuccess }: { user: User, i
         category: formData.get('category'),
         amount: Number(formData.get('amount')),
         description: formData.get('description'),
-        billing_period: formData.get('billing_period'),
+        billing_period: (formData.get('category') === 'Tagihan Bulanan' || formData.get('billing_period')) ? formData.get('billing_period') : null,
         transaction_date: formData.get('transaction_date')
       };
 
@@ -2421,10 +2670,11 @@ function TransactionModal({ user, isAdmin, onClose, onSuccess }: { user: User, i
       });
 
       if (res.ok) {
-        onSuccess();
+        const result = await res.json();
+        onSuccess(result);
       } else {
-        const errorText = await res.text();
-        alert('Gagal menyimpan transaksi: ' + errorText);
+        const errorData = await res.json();
+        alert('Gagal menyimpan: ' + (errorData.error || 'Terjadi kesalahan sistem.'));
       }
     } catch (err) {
       console.error(err);
@@ -2439,65 +2689,103 @@ function TransactionModal({ user, isAdmin, onClose, onSuccess }: { user: User, i
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" 
+        className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" 
       />
       <motion.div 
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        className="relative bg-white w-full max-w-lg rounded-3xl shadow-2xl p-8"
+        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+        className="relative bg-slate-50 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden"
       >
-        <h3 className="text-xl font-bold text-slate-900 mb-6">Catat Transaksi Manual</h3>
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid grid-cols-2 gap-4 p-1 bg-slate-100 rounded-xl">
+        <div className="bg-white p-6 border-b border-slate-100 flex items-center justify-between">
+           <div>
+              <h3 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+                <FileText className="w-5 h-5 text-indigo-500" /> Input Manual
+              </h3>
+              <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Catat Arus Kas Langsung</p>
+           </div>
+           <button onClick={onClose} className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors">
+              <LogOut className="w-5 h-5 rotate-180" />
+           </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-8 space-y-6">
+          <div className="grid grid-cols-2 gap-4 p-1.5 bg-slate-200/50 rounded-2xl">
              <button 
                 type="button" 
                 onClick={() => setType('pemasukan')}
-                className={cn("py-2 rounded-lg text-sm font-bold transition-all", type === 'pemasukan' ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500 hover:text-slate-700")}
+                className={cn(
+                  "py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all", 
+                  type === 'pemasukan' ? "bg-white text-emerald-600 shadow-lg" : "text-slate-500 hover:text-slate-700"
+                )}
              >
                Pemasukan
              </button>
              <button 
                 type="button" 
                 onClick={() => setType('pengeluaran')}
-                className={cn("py-2 rounded-lg text-sm font-bold transition-all", type === 'pengeluaran' ? "bg-white text-rose-600 shadow-sm" : "text-slate-500 hover:text-slate-700")}
+                className={cn(
+                  "py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all", 
+                  type === 'pengeluaran' ? "bg-white text-rose-600 shadow-lg" : "text-slate-500 hover:text-slate-700"
+                )}
              >
                Pengeluaran
              </button>
           </div>
           <input type="hidden" name="type" value={type} />
           
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Kategori</label>
-              <select name="category" className="input-field">
-                {CATEGORIES[type].map(cat => <option key={cat} value={cat}>{cat}</option>)}
-              </select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Kategori Transaksi</label>
+              <div className="relative group">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors">
+                  <BarChart3 className="w-4 h-4" />
+                </div>
+                <select name="category" className="w-full bg-white border border-slate-100 h-12 pl-11 pr-4 rounded-xl font-bold text-slate-700 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 outline-none appearance-none transition-all">
+                  {CATEGORIES[type].map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                </select>
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tanggal</label>
-              <input name="transaction_date" type="date" defaultValue={new Date().toISOString().split('T')[0]} className="input-field" required />
+            
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Tanggal Eksekusi</label>
+              <div className="relative group">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors">
+                  <Calendar className="w-4 h-4" />
+                </div>
+                <input name="transaction_date" type="date" defaultValue={new Date().toISOString().split('T')[0]} className="w-full bg-white border border-slate-100 h-12 pl-11 pr-4 rounded-xl font-bold text-slate-700 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 outline-none transition-all" required />
+              </div>
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Bulan Tagihan (Khusus Bulanan)</label>
-            <input name="billing_period" type="month" className="input-field" />
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Bulan Layanan (Opsional)</label>
+            <div className="relative group">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors">
+                <CalendarCheck2 className="w-4 h-4" />
+              </div>
+              <input name="billing_period" type="month" className="w-full bg-white border border-slate-100 h-12 pl-11 pr-4 rounded-xl font-bold text-slate-700 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 outline-none transition-all" />
+            </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Jumlah (Rp)</label>
-            <input name="amount" type="number" step="1000" className="input-field font-bold text-lg" placeholder="0" required />
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Nilai Transaksi (Rp)</label>
+            <div className="relative group">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors">
+                <Coins className="w-5 h-5" />
+              </div>
+              <input name="amount" type="number" step="1000" className="w-full bg-white border border-slate-100 h-16 pl-12 pr-4 rounded-2xl font-black text-2xl text-slate-800 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 outline-none transition-all tabular-nums placeholder:text-slate-200" placeholder="0" required />
+            </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Deskripsi</label>
-            <textarea name="description" className="input-field min-h-[80px]" placeholder="Keterangan singkat..."></textarea>
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Catatan Tambahan</label>
+            <textarea name="description" className="w-full bg-white border border-slate-100 p-4 rounded-2xl font-medium text-slate-700 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 outline-none transition-all min-h-[100px] placeholder:text-slate-300" placeholder="Jelaskan detail transaksi jika perlu..."></textarea>
           </div>
 
-          <div className="flex gap-3 pt-4">
-            <button type="button" onClick={onClose} className="flex-1 btn-secondary">Batal</button>
-            <button type="submit" className="flex-1 btn-primary">Simpan</button>
+          <div className="flex gap-4 pt-4">
+            <button type="button" onClick={onClose} className="flex-1 py-4 text-slate-400 font-black text-xs uppercase tracking-widest hover:text-slate-600 active:scale-95 transition-all">Batal</button>
+            <button type="submit" className="flex-1 bg-indigo-600 hover:bg-black text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-200 active:scale-95 transition-all uppercase tracking-widest text-xs">Simpan Data</button>
           </div>
         </form>
       </motion.div>
