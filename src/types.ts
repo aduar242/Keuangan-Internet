@@ -46,3 +46,11 @@ export interface DashboardStats {
   balance: number;
   pendingAmount?: number;
 }
+
+export interface AppSettings {
+  company_name: string;
+  company_address: string;
+  company_phone: string;
+  receipt_footer: string;
+  currency_symbol: string;
+}

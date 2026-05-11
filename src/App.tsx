@@ -25,9 +25,10 @@ import {
   Calendar,
   RefreshCw,
   ArrowRightCircle,
+  Settings,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { User, Transaction, DashboardStats, Customer, Packet } from './types';
+import { User, Transaction, DashboardStats, Customer, Packet, AppSettings } from './types';
 import { cn } from './lib/utils';
 import { generateInvoicePDF } from './lib/pdf';
 
@@ -48,9 +49,23 @@ const getBillingPeriods = () => {
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
+  const [settings, setSettings] = useState<AppSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [printerStatus, setPrinterStatus] = useState<'not_connected' | 'checking' | 'ready'>('not_connected');
+
+  const fetchSettings = async (userId: number) => {
+    try {
+      const res = await fetch('/api/settings', {
+        headers: { 'x-user-id': String(userId) }
+      });
+      if (res.ok) {
+        setSettings(await res.json());
+      }
+    } catch (err) {
+      console.error("Failed to fetch settings:", err);
+    }
+  };
 
   const checkPrinter = async () => {
     setPrinterStatus('checking');
@@ -79,6 +94,7 @@ export default function App() {
           if (res.ok) {
             const data = await res.json();
             setUser(data);
+            fetchSettings(data.id);
             // Sync with storage in case user data changed
             if (localStorage.getItem('user')) {
               localStorage.setItem('user', JSON.stringify(data));
@@ -115,6 +131,7 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         setUser(data);
+        fetchSettings(data.id);
         if (remember) {
           localStorage.setItem('user', JSON.stringify(data));
         } else {
@@ -151,7 +168,7 @@ export default function App() {
             <Coins className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="font-bold text-lg leading-tight uppercase tracking-wider">RT/RW NET</h1>
+            <h1 className="font-bold text-lg leading-tight uppercase tracking-wider">{settings?.company_name || 'RT/RW NET'}</h1>
             <p className="text-[10px] text-slate-400 font-medium">FINANCE ADMIN v1.0</p>
           </div>
         </div>
@@ -164,6 +181,7 @@ export default function App() {
               <SidebarLink active={activeTab === 'packets'} onClick={() => setActiveTab('packets')} icon={<BarChart3 className="w-5 h-5" />} label="Paket Internet" />
               <SidebarLink active={activeTab === 'users'} onClick={() => setActiveTab('users')} icon={<Users2 className="w-5 h-5" />} label="User Penagih" />
               <SidebarLink active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} icon={<CalendarCheck2 className="w-5 h-5" />} label="Laporan Pembayaran" />
+              <SidebarLink active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings className="w-5 h-5" />} label="Pengaturan" />
             </>
           )}
           <SidebarLink active={activeTab === 'history'} onClick={() => setActiveTab('history')} icon={<History className="w-5 h-5" />} label="Riwayat" />
@@ -224,7 +242,7 @@ export default function App() {
               <Coins className="w-6 h-6 text-white" />
             </div>
             <div>
-              <span className="block font-black text-slate-900 tracking-tighter text-lg leading-none">RT/RW NET</span>
+              <span className="block font-black text-slate-900 tracking-tighter text-lg leading-none">{settings?.company_name || 'RT/RW NET'}</span>
               <div className="flex items-center gap-1.5 mt-1">
                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{user.role}</span>
                 <span className="w-1 h-1 rounded-full bg-slate-300"></span>
@@ -253,18 +271,19 @@ export default function App() {
           >
             {user.role === 'admin' ? (
               <>
-                {activeTab === 'dashboard' && <AdminDashboard user={user} />}
+                {activeTab === 'dashboard' && <AdminDashboard user={user} settings={settings} />}
                 {activeTab === 'customers' && <CustomerManagement user={user} />}
                 {activeTab === 'packets' && <PacketManagement user={user} />}
                 {activeTab === 'users' && <UserManagement user={user} />}
                 {activeTab === 'reports' && <PaymentReport user={user} />}
-                {activeTab === 'history' && <AdminDashboard user={user} />}
+                {activeTab === 'settings' && <SettingsManagement user={user} />}
+                {activeTab === 'history' && <AdminDashboard user={user} settings={settings} />}
               </>
             ) : (
               <>
-                {activeTab === 'dashboard' && <CollectorDashboard user={user} />}
+                {activeTab === 'dashboard' && <CollectorDashboard user={user} settings={settings} />}
                 {activeTab === 'customers' && <CustomerManagement user={user} />}
-                {activeTab === 'history' && <CollectorDashboard user={user} />}
+                {activeTab === 'history' && <CollectorDashboard user={user} settings={settings} />}
               </>
             )}
           </motion.div>
@@ -298,6 +317,7 @@ function MobileNav({ activeTab, setActiveTab, user }: { activeTab: string, setAc
         <>
           <MobileNavItem active={activeTab === 'packets'} onClick={() => setActiveTab('packets')} icon={<BarChart3 className="w-6 h-6" />} />
           <MobileNavItem active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} icon={<CalendarCheck2 className="w-6 h-6" />} />
+          <MobileNavItem active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings className="w-6 h-6" />} />
         </>
       )}
       <MobileNavItem active={activeTab === 'history'} onClick={() => setActiveTab('history')} icon={<History className="w-6 h-6" />} />
@@ -426,7 +446,7 @@ function LoginScreen({ onLogin }: { onLogin: (e: React.FormEvent<HTMLFormElement
   );
 }
 
-function AdminDashboard({ user }: { user: User }) {
+function AdminDashboard({ user, settings }: { user: User, settings: AppSettings | null }) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -572,10 +592,10 @@ function AdminDashboard({ user }: { user: User }) {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Saldo Kas Saat Ini" amount={stats?.balance || 0} icon={<Wallet className="w-6 h-6 text-indigo-600" />} color="indigo" />
-        <StatCard title="Total Pemasukan" amount={stats?.totalIncome || 0} icon={<ArrowUpCircle className="w-6 h-6 text-emerald-600" />} color="emerald" />
-        <StatCard title="Uang Masuk Petugas" amount={stats?.pendingAmount || 0} icon={<Coins className="w-6 h-6 text-amber-600" />} color="amber" />
-        <StatCard title="Total Pengeluaran" amount={stats?.totalExpense || 0} icon={<ArrowDownCircle className="w-6 h-6 text-rose-600" />} color="rose" />
+        <StatCard title="Saldo Kas Saat Ini" amount={stats?.balance || 0} icon={<Wallet className="w-6 h-6 text-indigo-600" />} color="indigo" settings={settings} />
+        <StatCard title="Total Pemasukan" amount={stats?.totalIncome || 0} icon={<ArrowUpCircle className="w-6 h-6 text-emerald-600" />} color="emerald" settings={settings} />
+        <StatCard title="Uang Masuk Petugas" amount={stats?.pendingAmount || 0} icon={<Coins className="w-6 h-6 text-amber-600" />} color="amber" settings={settings} />
+        <StatCard title="Total Pengeluaran" amount={stats?.totalExpense || 0} icon={<ArrowDownCircle className="w-6 h-6 text-rose-600" />} color="rose" settings={settings} />
       </div>
 
       {/* Pending Deposits Section */}
@@ -758,7 +778,7 @@ function AdminDashboard({ user }: { user: User }) {
       </div>
 
 
-      <Receipt transaction={transactionToPrint} userName={user.name} />
+      <Receipt transaction={transactionToPrint} userName={user.name} settings={settings} />
 
       <AnimatePresence>
         {showModal && (
@@ -774,7 +794,7 @@ function AdminDashboard({ user }: { user: User }) {
   );
 }
 
-function CollectorDashboard({ user }: { user: User }) {
+function CollectorDashboard({ user, settings }: { user: User, settings: AppSettings | null }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [packets, setPackets] = useState<Packet[]>([]);
@@ -1406,7 +1426,7 @@ function CollectorDashboard({ user }: { user: User }) {
         </div>
       </div>
 
-      <Receipt transaction={transactionToPrint} userName={user.name} />
+      <Receipt transaction={transactionToPrint} userName={user.name} settings={settings} />
 
       <AnimatePresence>
         {showQuickAdd && (
@@ -1580,15 +1600,15 @@ function CollectorDashboard({ user }: { user: User }) {
   );
 }
 
-function Receipt({ transaction, userName }: { transaction: Transaction | null, userName: string }) {
+function Receipt({ transaction, userName, settings }: { transaction: Transaction | null, userName: string, settings: AppSettings | null }) {
   if (!transaction) return null;
   return (
     <div className="print-container hidden print:block text-slate-900 bg-white p-6 w-[80mm] mx-auto border border-slate-100 font-sans">
       {/* Header */}
       <div className="text-center border-b-2 border-slate-900 pb-3 mb-4">
-        <h1 className="font-black text-lg tracking-tighter uppercase leading-tight">NET CORE WIFI</h1>
+        <h1 className="font-black text-lg tracking-tighter uppercase leading-tight">{settings?.company_name || 'NET CORE WIFI'}</h1>
         <p className="text-[9px] font-black tracking-[0.2em] text-slate-500 mb-1">RT/RW NET SOLUTION</p>
-        <p className="text-[8px] font-medium text-slate-400">Jln. Kebon Jeruk No. 88, Jakarta Selatan</p>
+        <p className="text-[8px] font-medium text-slate-400">{settings?.company_address || 'Jln. Kebon Jeruk No. 88, Jakarta Selatan'}</p>
         <p className="text-[8px] font-bold text-slate-900 border-t border-slate-100 mt-2 pt-1 uppercase">Struk Pembayaran Sah</p>
       </div>
 
@@ -1651,9 +1671,9 @@ function Receipt({ transaction, userName }: { transaction: Transaction | null, u
             Lunas / Paid ✅
           </div>
           <p className="text-[7px] text-slate-400 font-bold uppercase leading-relaxed">
-            Terima kasih telah berlangganan.<br/>
+            {settings?.receipt_footer || 'Terima kasih telah berlangganan.'}<br/>
             Pembayaran Anda telah tercatat dalam sistem kami.<br/>
-            <span className="text-indigo-500 mt-1 block">CS: 0812-XXXX-XXXX (WhatsApp Only)</span>
+            <span className="text-indigo-500 mt-1 block">CS: {settings?.company_phone || '0812-XXXX-XXXX'} (WhatsApp Only)</span>
           </p>
         </div>
         
@@ -1994,6 +2014,175 @@ function PacketManagement({ user }: { user: User }) {
   );
 }
 
+function SettingsManagement({ user }: { user: User }) {
+  const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch('/api/settings', {
+        headers: { 'x-user-id': String(user.id) }
+      });
+      if (res.ok) {
+        setSettings(await res.json());
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchSettings(); }, []);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const formData = new FormData(e.currentTarget);
+      const data = {
+        company_name: formData.get('company_name'),
+        company_address: formData.get('company_address'),
+        company_phone: formData.get('company_phone'),
+        receipt_footer: formData.get('receipt_footer'),
+        currency_symbol: formData.get('currency_symbol'),
+      };
+
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-user-id': String(user.id) },
+        body: JSON.stringify(data)
+      });
+
+      if (res.ok) {
+        alert('Pengaturan berhasil disimpan!');
+        fetchSettings();
+      } else {
+        alert('Gagal menyimpan pengaturan.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Terjadi kesalahan saat menyimpan.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <div>Memuat...</div>;
+
+  return (
+    <div className="space-y-8 max-w-4xl mx-auto pb-20">
+      <header className="flex items-center gap-4">
+        <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-indigo-200">
+           <Settings className="w-7 h-7" />
+        </div>
+        <div>
+          <h2 className="text-2xl font-black text-slate-800 tracking-tight">Pengaturan Sistem</h2>
+          <p className="text-slate-500 text-sm">Kelola identitas bisnis dan konfigurasi aplikasi</p>
+        </div>
+      </header>
+
+      <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+        <div className="p-8 space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-4">
+              <h3 className="font-black text-slate-800 uppercase tracking-widest text-xs flex items-center gap-2">
+                <LayoutDashboard className="w-4 h-4 text-indigo-500" /> Identitas Bisnis
+              </h3>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Nama Perusahaan / RT/RW Net</label>
+                <input 
+                  name="company_name"
+                  defaultValue={settings?.company_name}
+                  className="input-field h-12 font-bold" 
+                  placeholder="Contoh: KONEKSINET"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Nomor Kontak (WhatsApp)</label>
+                <input 
+                  name="company_phone"
+                  defaultValue={settings?.company_phone}
+                  className="input-field h-12 font-mono" 
+                  placeholder="0812-XXXX-XXXX"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Simbol Mata Uang</label>
+                <input 
+                  name="currency_symbol"
+                  defaultValue={settings?.currency_symbol}
+                  className="input-field h-12 w-24 text-center font-bold" 
+                  placeholder="Rp"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="font-black text-slate-800 uppercase tracking-widest text-xs flex items-center gap-2">
+                <FileText className="w-4 h-4 text-emerald-500" /> Konfigurasi Struk
+              </h3>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Alamat (Untuk Struk)</label>
+                <textarea 
+                  name="company_address"
+                  defaultValue={settings?.company_address}
+                  className="input-field min-h-[100px] py-3 text-sm" 
+                  placeholder="Alamat lengkap usaha"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Footer Struk (Terima Kasih)</label>
+                <textarea 
+                  name="receipt_footer"
+                  defaultValue={settings?.receipt_footer}
+                  className="input-field min-h-[100px] py-3 text-sm" 
+                  placeholder="Pesan di bawah struk"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-8 bg-slate-50 border-t border-slate-100 flex justify-end">
+           <button 
+             type="submit" 
+             disabled={saving}
+             className="bg-indigo-600 hover:bg-black text-white font-black px-10 py-4 rounded-2xl shadow-xl shadow-indigo-200 transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
+           >
+             {saving ? (
+               <>
+                 <RefreshCw className="w-5 h-5 animate-spin" />
+                 MENYIMPAN...
+               </>
+             ) : (
+               <>
+                 <Check className="w-5 h-5" />
+                 SIMPAN PERUBAHAN
+               </>
+             )}
+           </button>
+        </div>
+      </form>
+
+      <div className="bg-amber-50 border border-amber-100 rounded-3xl p-6 flex flex-col md:flex-row items-center gap-6">
+        <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-amber-500 shadow-sm border border-amber-100 flex-shrink-0">
+           <Printer className="w-10 h-10" />
+        </div>
+        <div className="flex-1">
+          <h4 className="font-bold text-amber-900 leading-tight">Uji Coba Cetak</h4>
+          <p className="text-amber-800/60 text-sm mt-1">Pastikan printer thermal Anda terhubung sebelum melakukan pengaturan lebih lanjut.</p>
+        </div>
+        <button className="bg-white border border-amber-200 text-amber-600 font-bold px-6 py-3 rounded-xl hover:bg-amber-100 transition-all uppercase tracking-widest text-[10px]">
+           Tes Print Halaman
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function UserManagement({ user }: { user: User }) {
   const [users, setUsers] = useState<User[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -2136,7 +2325,7 @@ function UserManagement({ user }: { user: User }) {
   );
 }
 
-function StatCard({ title, amount, icon, color }: { title: string, amount: number, icon: React.ReactNode, color: 'indigo' | 'emerald' | 'rose' | 'amber' }) {
+function StatCard({ title, amount, icon, color, settings }: { title: string, amount: number, icon: React.ReactNode, color: 'indigo' | 'emerald' | 'rose' | 'amber', settings?: AppSettings | null }) {
   const isNegative = amount < 0;
   
   const colorMap = {
@@ -2192,7 +2381,7 @@ function StatCard({ title, amount, icon, color }: { title: string, amount: numbe
         "text-2xl font-black tracking-tight tabular-nums relative z-10",
         isNegative ? "text-rose-600" : "text-slate-800"
       )}>
-        {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount)}
+        {settings?.currency_symbol || 'Rp'} {Math.abs(amount).toLocaleString('id-ID')}
       </p>
       
       <div className="absolute bottom-0 left-0 right-0 h-1 bg-slate-50 overflow-hidden rounded-full mx-6 mb-2 opacity-0 group-hover:opacity-100 transition-opacity">

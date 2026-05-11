@@ -52,6 +52,15 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users (id),
     FOREIGN KEY (customer_id) REFERENCES customers (id)
   );
+
+  CREATE TABLE IF NOT EXISTS settings (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    company_name TEXT NOT NULL DEFAULT 'RT/RW NET',
+    company_address TEXT,
+    company_phone TEXT,
+    receipt_footer TEXT,
+    currency_symbol TEXT DEFAULT 'Rp'
+  );
 `);
 
 // --- RUNTIME MIGRATIONS ---
@@ -61,6 +70,12 @@ try {
 try {
   db.prepare('ALTER TABLE transactions ADD COLUMN billing_period TEXT').run();
 } catch (e) {}
+
+// Seed default settings if not exists
+const settingsCount = db.prepare('SELECT count(*) as count FROM settings').get() as { count: number };
+if (settingsCount.count === 0) {
+  db.prepare('INSERT INTO settings (id, company_name, company_address, company_phone, receipt_footer) VALUES (1, "RT/RW NET", "Jln. Kebon Jeruk No. 88, Jakarta Selatan", "0812-XXXX-XXXX", "Terima kasih telah berlangganan.")').run();
+}
 
 // Seed default users if not exists
 const userCount = db.prepare('SELECT count(*) as count FROM users').get() as { count: number };
@@ -392,6 +407,29 @@ async function startServer() {
       res.json(db.prepare('SELECT id, username, role, name FROM users').all());
     } catch (err) {
       res.status(500).json({ error: 'Failed to fetch user list' });
+    }
+  });
+
+  // Settings
+  app.get('/api/settings', authMiddleware, (req, res) => {
+    try {
+      res.json(db.prepare('SELECT * FROM settings WHERE id = 1').get());
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to fetch settings' });
+    }
+  });
+
+  app.put('/api/settings', authMiddleware, adminOnly, (req, res) => {
+    try {
+      const { company_name, company_address, company_phone, receipt_footer, currency_symbol } = req.body;
+      db.prepare(`
+        UPDATE settings 
+        SET company_name = ?, company_address = ?, company_phone = ?, receipt_footer = ?, currency_symbol = ? 
+        WHERE id = 1
+      `).run(company_name, company_address, company_phone, receipt_footer, currency_symbol);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to update settings' });
     }
   });
 
