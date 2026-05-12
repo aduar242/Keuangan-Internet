@@ -257,90 +257,77 @@ export default function App() {
     return <LoginScreen onLogin={handleLogin} />;
   }
 
-  return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-slate-50 transition-colors duration-500">
+    return (
+    <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
       {/* Sidebar - Desktop */}
-      <aside className="hidden md:flex w-64 bg-slate-900 border-r border-slate-800 flex-col p-6 space-y-8 sticky top-0 h-screen">
-        <div className="flex items-center gap-3 text-white">
-          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
-            <Coins className="w-6 h-6" />
+      <aside className="hidden md:flex w-72 bg-slate-950 border-r border-white/5 flex-col p-8 space-y-10 sticky top-0 h-screen shadow-2xl">
+        <div className="flex items-center gap-4 text-white group cursor-pointer">
+          <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform">
+            <Coins className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h1 className="font-bold text-lg leading-tight uppercase tracking-wider">{settings?.company_name || 'RT/RW NET'}</h1>
-            <p className="text-[10px] text-slate-400 font-medium">FINANCE ADMIN v1.0</p>
+            <h1 className="font-black text-white tracking-tighter text-xl leading-none">{settings?.company_name || 'RT/RW NET'}</h1>
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1 inline-block bg-white/5 px-2 py-0.5 rounded">PRO PANEL</span>
           </div>
         </div>
 
-        <nav className="flex-1 space-y-1">
-          <SidebarLink active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<LayoutDashboard className="w-5 h-5" />} label="Dashboard" />
-          <SidebarLink active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} icon={<UsersIcon className="w-5 h-5" />} label="Pelanggan" />
+        <nav className="flex-1 space-y-2">
+          <SidebarLink active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home className="w-5 h-5" />} label="Dashboard" />
+          <SidebarLink active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} icon={<UsersIcon className="w-5 h-5" />} label="Database Pelanggan" />
           {user.role === 'admin' && (
             <>
               <SidebarLink active={activeTab === 'packets'} onClick={() => setActiveTab('packets')} icon={<BarChart3 className="w-5 h-5" />} label="Paket Internet" />
               <SidebarLink active={activeTab === 'users'} onClick={() => setActiveTab('users')} icon={<Users2 className="w-5 h-5" />} label="User Penagih" />
               <SidebarLink active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} icon={<CalendarCheck2 className="w-5 h-5" />} label="Laporan Pembayaran" />
-              <SidebarLink active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings className="w-5 h-5" />} label="Pengaturan" />
+              <SidebarLink active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings className="w-5 h-5" />} label="Pengaturan Sistem" />
             </>
           )}
           <SidebarLink active={activeTab === 'history'} onClick={() => setActiveTab('history')} icon={<History className="w-5 h-5" />} label="Riwayat" />
         </nav>
 
-        {deferredPrompt && (
-          <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl p-4 shadow-xl shadow-indigo-200 mb-4 mx-2 border border-indigo-400/30">
-            <p className="text-[10px] font-black text-indigo-100 uppercase tracking-widest mb-1">Dapatkan Akses Cepat</p>
-            <p className="text-xs font-bold text-white mb-3">Install Aplikasi ke Beranda</p>
+        <div className="space-y-4">
+          <div className="bg-white/5 rounded-[2rem] border border-white/5 p-5">
+            <div className="flex items-center gap-3 mb-4">
+              <div className={cn(
+                "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
+                printerStatus === 'ready' ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"
+              )}>
+                <Printer className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">Thermal Printer</p>
+                <p className={cn("text-xs font-bold leading-none", printerStatus === 'ready' ? "text-emerald-400" : "text-rose-400")}>
+                  {printerStatus === 'ready' ? 'READY' : (printerStatus === 'checking' ? 'SYNCING...' : 'OFFLINE')}
+                </p>
+              </div>
+            </div>
             <button 
-              onClick={handleInstallClick}
-              className="w-full py-2.5 bg-white text-indigo-600 font-black text-[10px] rounded-xl shadow-lg active:scale-95 transition-all uppercase tracking-widest"
+              onClick={checkPrinter}
+              disabled={printerStatus === 'checking'}
+              className="w-full py-2 bg-white/5 hover:bg-white/10 text-slate-400 text-[10px] font-black rounded-lg transition-all flex items-center justify-center gap-1.5 active:scale-95 border border-white/5"
             >
-              INSTALL APP
+              <RefreshCw className={cn("w-3 h-3", printerStatus === 'checking' && "animate-spin")} />
+              CEK KONEKSI
             </button>
           </div>
-        )}
 
-        <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700/50 mb-4 mx-2">
-          <div className="flex items-center gap-3 mb-3">
-            <div className={cn(
-              "w-9 h-9 rounded-xl flex items-center justify-center transition-all",
-              printerStatus === 'ready' ? "bg-emerald-500/10 text-emerald-400 shadow-inner" : "bg-rose-500/10 text-rose-400 shadow-inner"
-            )}>
-              <Printer className="w-5 h-5" />
+          <div className="p-6 bg-white/5 rounded-[2rem] border border-white/5">
+            <div className="flex items-center gap-3 mb-4 pr-2">
+              <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-black">
+                {user.name.charAt(0).toUpperCase()}
+              </div>
+              <div className="overflow-hidden">
+                <p className="font-black text-white text-sm truncate">{user.name}</p>
+                <p className="text-[10px] text-slate-500 font-bold uppercase truncate">{user.role}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">Thermal Printer</p>
-              <p className={cn("text-xs font-bold leading-none", printerStatus === 'ready' ? "text-emerald-400" : "text-rose-400")}>
-                {printerStatus === 'ready' ? 'TERHUBUNG' : 
-                 printerStatus === 'checking' ? 'MENGECEK...' : 'TIDAK AKTIF'}
-              </p>
-            </div>
+            <button 
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all font-black text-[10px] uppercase tracking-widest"
+            >
+              <LogOut className="w-4 h-4" /> Keluar Sesi
+            </button>
           </div>
-          <button 
-            onClick={checkPrinter}
-            disabled={printerStatus === 'checking'}
-            className="w-full py-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 text-[10px] font-black rounded-lg transition-all flex items-center justify-center gap-1.5 border border-slate-600/50 active:scale-95"
-          >
-            <RefreshCw className={cn("w-3 h-3", printerStatus === 'checking' && "animate-spin")} />
-            REFRESH KONEKSI
-          </button>
-        </div>
-
-        <div className="pt-6 border-t border-slate-800 space-y-4">
-          <div className="flex items-center gap-3 px-2">
-            <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-white uppercase">
-              {user.name.charAt(0)}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{user.name}</p>
-              <p className="text-xs text-slate-500 capitalize">{user.role}</p>
-            </div>
-          </div>
-          <button 
-            onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-2 py-2 text-slate-400 hover:text-red-400 transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="text-sm font-medium">Keluar</span>
-          </button>
         </div>
       </aside>
 
@@ -403,10 +390,11 @@ export default function App() {
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -10 }}
-            transition={{ duration: 0.2 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="will-change-[opacity]"
           >
             {user.role === 'admin' ? (
               <>
@@ -829,7 +817,6 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
           {transactions.map((t) => (
             <motion.div 
               key={t.id} 
-              layout
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               className="relative overflow-hidden group border-b border-slate-50 last:border-0"
@@ -912,70 +899,105 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
 
         {/* Desktop View: Table */}
         <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full text-left border-separate border-spacing-0">
             <thead>
-              <tr className="text-slate-400 text-[10px] uppercase tracking-[0.2em] font-black bg-slate-50/50">
-                <th className="px-8 py-5">Tanggal</th>
-                <th className="px-8 py-5">Pelanggan / Kategori</th>
-                <th className="px-8 py-5 text-center">Status Bukti</th>
-                <th className="px-8 py-5 text-right">Nominal</th>
-                <th className="px-8 py-5 text-center">Aksi</th>
+              <tr className="bg-slate-50/80 backdrop-blur-sm sticky top-0 z-10 transition-colors">
+                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">Detail Transaksi</th>
+                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">Keterangan / Deskripsi</th>
+                <th className="px-8 py-6 text-center text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">Petugas / Status</th>
+                <th className="px-8 py-6 text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">Nominal</th>
+                <th className="px-8 py-6 text-center text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">Opsi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50 text-sm">
-              {transactions.map((t) => (
-                <tr key={t.id} className="hover:bg-slate-50/50 transition-colors group">
-                  <td className="px-8 py-5 font-mono text-slate-400 text-xs">{t.transaction_date}</td>
-                  <td className="px-8 py-5">
-                    <div className="font-black text-slate-800">{t.customer_name || t.category}</div>
-                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
-                      {t.customer_name ? t.category : t.description}
-                      {t.billing_period && t.category === 'Tagihan Bulanan' && ` - ${t.billing_period.split(',').map(p => formatPeriod(p.trim())).join(', ')}`}
+            <tbody className="divide-y divide-slate-50">
+              {transactions.map((t, index) => (
+                <motion.tr 
+                  key={t.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.03, duration: 0.3 }}
+                  className="hover:bg-indigo-50/30 transition-all duration-300 group"
+                >
+                  <td className="px-8 py-6">
+                    <div className="flex items-center gap-4">
+                      <div className={cn(
+                        "w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg transition-transform group-hover:scale-110 duration-500",
+                        t.type === 'pemasukan' ? "bg-emerald-500 shadow-emerald-100" : "bg-rose-500 shadow-rose-100"
+                      )}>
+                        {t.type === 'pemasukan' ? <Plus className="w-6 h-6" /> : <Minus className="w-6 h-6" />}
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">{t.transaction_date.split('-').reverse().join('/')}</div>
+                        <div className="font-black text-slate-800 text-sm">{t.customer_name || t.category}</div>
+                        <div className="text-[9px] font-black text-indigo-400 uppercase tracking-tighter mt-1 opacity-0 group-hover:opacity-100 transition-opacity">ID: #{t.id}</div>
+                      </div>
                     </div>
                   </td>
-                  <td className="px-8 py-5 text-center">
-                    <div className={cn(
-                      "text-[9px] font-black uppercase px-3 py-1 rounded-full inline-flex items-center gap-1.5",
-                      t.status === 'confirmed' ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : 
-                      t.status === 'deposited' ? "bg-amber-50 text-amber-600 border border-amber-100" :
-                      "bg-slate-50 text-slate-400"
-                    )}>
-                      {t.status === 'confirmed' && <Check className="w-2.5 h-2.5" />}
-                      {t.status}
+                  <td className="px-8 py-6">
+                    <div className="max-w-[200px]">
+                      <p className="text-xs font-bold text-slate-500 italic leading-relaxed">
+                        {t.customer_name ? t.category : t.description}
+                        {t.billing_period && t.category === 'Tagihan Bulanan' && (
+                          <span className="block not-italic text-[10px] text-indigo-500 font-black mt-1 uppercase tracking-tight">
+                            Periode: {t.billing_period.split(',').map(p => formatPeriod(p.trim())).join(', ')}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </td>
+                  <td className="px-8 py-6 text-center">
+                    <div className="space-y-2">
+                      <div className="bg-slate-100 text-slate-500 text-[9px] font-black px-2 py-1 rounded-md inline-block uppercase tracking-widest">
+                        {t.collector_name || 'Admin'}
+                      </div>
+                      <div className="block">
+                        <div className={cn(
+                          "text-[9px] font-black uppercase px-3 py-1 rounded-full inline-flex items-center gap-1.5 border transition-all",
+                          t.status === 'confirmed' ? "bg-emerald-50 text-emerald-600 border-emerald-100" : 
+                          t.status === 'deposited' ? "bg-amber-50 text-amber-600 border-amber-100" :
+                          "bg-slate-50 text-slate-400 border-slate-100"
+                        )}>
+                          {t.status === 'confirmed' && <Check className="w-2.5 h-2.5" />}
+                          {t.status}
+                        </div>
+                      </div>
                     </div>
                   </td>
                   <td className={cn(
-                    "px-8 py-5 text-right font-black tabular-nums text-base",
+                    "px-8 py-6 text-right font-black tabular-nums text-xl tracking-tighter transition-all group-hover:scale-105",
                     t.type === 'pemasukan' ? "text-emerald-600" : "text-rose-600"
                   )}>
                     {t.type === 'pemasukan' ? '+' : '-'} {new Intl.NumberFormat('id-ID').format(t.amount)}
                   </td>
-                  <td className="px-8 py-5 text-center">
-                    <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <td className="px-8 py-6 text-center">
+                    <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-all transform group-hover:translate-x-0 translate-x-4">
                       <button 
                         onClick={() => printTransaction(t.id)}
                         disabled={isPrinting}
-                        className="p-2 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                        className="p-2.5 text-slate-300 hover:text-indigo-600 hover:bg-white hover:shadow-md rounded-xl transition-all"
+                        title="Cetak Struk"
                       >
                         <Printer className="w-4 h-4" />
                       </button>
                       {t.customer_id && (
                         <button 
                           onClick={() => handleDownloadInvoice(t.id)}
-                          className="p-2 text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                          className="p-2.5 text-slate-300 hover:text-emerald-600 hover:bg-white hover:shadow-md rounded-xl transition-all"
+                          title="Download PDF"
                         >
                           <Download className="w-4 h-4" />
                         </button>
                       )}
                       <button 
                         onClick={() => handleDelete(t.id)}
-                        className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                        className="p-2.5 text-slate-300 hover:text-rose-600 hover:bg-white hover:shadow-md rounded-xl transition-all"
+                        title="Hapus"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </td>
-                </tr>
+                </motion.tr>
               ))}
             </tbody>
           </table>
@@ -1327,61 +1349,355 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
   };
 
   return (
-    <div className="space-y-8 max-w-2xl mx-auto pb-12">
-        {/* Quick Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-           {/* Summary Tooltips */}
-            <div className="bg-indigo-600 p-8 rounded-[3rem] text-white shadow-2xl shadow-indigo-200 border-b-8 border-indigo-800 flex flex-col justify-between min-h-[220px]">
-               <div>
-                 <p className="text-xs font-black text-indigo-200 uppercase tracking-widest mb-2 flex items-center gap-2">
-                   <Wallet className="w-4 h-4" /> Uang yang Anda Pegang
-                 </p>
-                 <p className="text-5xl font-black tracking-tighter leading-none mb-2">Rp {heldBalance.toLocaleString()}</p>
-                 <p className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider">Silakan setorkan ke Admin jika sudah banyak</p>
-               </div>
-               <button 
-                 onClick={handleDeposit}
-                 disabled={heldBalance === 0}
-                 className="mt-8 w-full bg-white text-indigo-600 py-5 rounded-[2rem] font-black text-sm uppercase tracking-[0.1em] active:scale-95 transition-all shadow-xl shadow-indigo-900/20 disabled:opacity-50 flex items-center justify-center gap-3"
-               >
-                 <Coins className="w-5 h-5" /> KONFIRMASI SETORAN
-               </button>
-            </div>
-           
-           <div className="grid grid-cols-2 gap-4">
-             {/* Printer Card */}
-             <div 
-               onClick={() => setShowPrinterSettings(!showPrinterSettings)}
-               className={cn(
-                 "p-5 rounded-[2rem] border transition-all active:scale-95 cursor-pointer flex flex-col justify-between",
-                 showPrinterSettings ? "bg-slate-900 border-slate-900 shadow-xl" : "bg-white border-slate-100 shadow-sm"
-               )}
-             >
-                <div className={cn(
-                  "w-10 h-10 rounded-xl flex items-center justify-center mb-3",
-                  showPrinterSettings ? "bg-white/10 text-white" : "bg-indigo-50 text-indigo-600"
-                )}>
-                   <Printer className="w-5 h-5" />
-                </div>
-                <div>
-                   <p className={cn("text-[8px] font-black uppercase tracking-widest leading-none mb-1", showPrinterSettings ? "text-slate-500" : "text-slate-400")}>Printer</p>
-                   <p className={cn("text-xs font-black", showPrinterSettings ? "text-white" : "text-slate-800")}>Thermal</p>
-                </div>
-             </div>
-             {/* Info Card */}
-             <div className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col justify-between">
-                <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-3">
-                   <Target className="w-5 h-5" />
-                </div>
-                <div>
-                   <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Target</p>
-                   <p className="text-xs font-black text-emerald-600">Terbaik</p>
-                </div>
-             </div>
+    <div className="space-y-10 max-w-6xl mx-auto pb-12">
+        {/* Top Header - Desktop Only */}
+        <div className="hidden md:flex items-center justify-between mb-2">
+           <div>
+              <h1 className="text-4xl font-black text-slate-900 tracking-tighter">Halo, {user.name.split(' ')[0]}!</h1>
+              <p className="text-slate-500 font-medium mt-1">Kelola penagihan harian dengan mudah.</p>
+           </div>
+           <div className="flex items-center gap-4">
+              <div className="text-right">
+                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hari Ini</p>
+                 <p className="text-sm font-bold text-slate-700">{new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center shadow-sm">
+                 <Calendar className="w-6 h-6 text-indigo-600" />
+              </div>
            </div>
         </div>
 
-        {/* Printer Settings Overlay (Mobile Only) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Main Form Area */}
+          <div className="lg:col-span-8 space-y-8">
+            <header className="mb-6 md:mb-0">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-3 h-3 rounded-full bg-emerald-500 shadow shadow-emerald-200"></div>
+                <h2 className="text-3xl font-black tracking-tight text-slate-800 font-sans">Input Tagihan</h2>
+              </div>
+              <p className="text-slate-500 text-sm font-medium">Layanan pencatatan pembayaran pelanggan</p>
+            </header>
+
+            {/* Input Form Card */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white rounded-[3rem] p-8 md:p-12 shadow-xl border border-slate-100"
+            >
+              <form onSubmit={handleSubmit} className="space-y-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center px-1">
+                      <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.1em]">Cari Pelanggan</label>
+                      <button 
+                        type="button"
+                        onClick={() => setShowQuickAdd(true)}
+                        className="text-[10px] font-black text-indigo-600 hover:text-indigo-700 flex items-center gap-1 uppercase tracking-widest"
+                      >
+                        <Plus className="w-3 h-3" /> Pelanggan Baru
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400">
+                        <Search className="w-5 h-5" />
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Masukkan nama atau alamat..."
+                        value={searchTerm}
+                        onChange={(e) => {
+                          setSearchTerm(e.target.value);
+                          setShowCustomerList(true);
+                        }}
+                        onFocus={() => setShowCustomerList(true)}
+                        className="w-full bg-slate-50 text-slate-900 border-2 border-slate-100 pl-14 pr-12 py-5 rounded-[1.5rem] focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-bold text-lg placeholder:text-slate-300"
+                      />
+                      {searchTerm && (
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            setSelectedCustomerId('');
+                            setSearchTerm('');
+                            setSelectedPeriods([]);
+                          }}
+                          className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500 transition-colors"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      )}
+                      
+                      {showCustomerList && (
+                        <div className="absolute z-[110] left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-indigo-100 max-h-72 overflow-y-auto overflow-x-hidden p-2">
+                          <div className="px-3 py-2 border-b border-slate-50 mb-1 flex justify-between items-center">
+                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Pilih Pelanggan ({filteredCustomers.length})</p>
+                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                          </div>
+                          {filteredCustomers.length > 0 ? (
+                            filteredCustomers.map(c => (
+                              <button
+                                key={c.id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedCustomerId(String(c.id));
+                                  setSearchTerm(c.name);
+                                  setShowCustomerList(false);
+                                }}
+                                className="w-full text-left px-5 py-4 hover:bg-indigo-50/50 rounded-xl transition-all border-b last:border-0 border-slate-50 active:scale-[0.98] group"
+                              >
+                                <div className="font-bold text-slate-900 flex items-center justify-between mb-0.5">
+                                  <span className="group-hover:text-indigo-600 transition-colors">{c.name}</span>
+                                  {getUnpaidMonthsList(c).length === 0 ? (
+                                    <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">LUNAS</span>
+                                  ) : (
+                                    <span className="text-[9px] font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100">{getUnpaidMonthsList(c).length} BLN</span>
+                                  )}
+                                </div>
+                                <div className="text-[10px] text-slate-500 uppercase flex justify-between items-center opacity-70">
+                                  <span className="truncate max-w-[150px] italic">{c.address}</span>
+                                  <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-[8px]">ID: {c.id}</span>
+                                </div>
+                              </button>
+                            ))
+                          ) : (
+                            <div className="px-5 py-8 text-center">
+                              <UserX className="w-10 h-10 mx-auto text-slate-200 mb-2" />
+                              <p className="text-slate-400 italic text-xs font-bold uppercase tracking-tight">Pelanggan tidak ditemukan</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.1em] px-1">Pilih Keterangan Setoran</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {['Tagihan Bulanan', 'Pemasangan Baru', 'Denda', 'Voucher', 'Lain-lain'].map((cat) => (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => setSelectedCategory(cat)}
+                          className={cn(
+                            "py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border-2",
+                            selectedCategory === cat 
+                              ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200 scale-[1.02]" 
+                              : "bg-slate-50 border-slate-100 text-slate-400 hover:border-slate-200"
+                          )}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {selectedCategory === 'Tagihan Bulanan' && unpaidMonthsList.length > 0 ? (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.2 }}
+                    className="space-y-4"
+                  >
+                    <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.1em] px-1">Pilih Bulan yang Dibayar (Bisa pilih banyak)</label>
+                    <div className="flex flex-wrap gap-2">
+                      {unpaidMonthsList.map(m => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => togglePeriod(m)}
+                          className={cn(
+                            "px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border-2",
+                            selectedPeriods.includes(m) 
+                              ? "bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-100 scale-110 z-10" 
+                              : "bg-slate-50 border-slate-100 text-slate-400 hover:border-slate-200"
+                          )}
+                        >
+                          {formatPeriod(m)}
+                          {m > new Date().toISOString().slice(0, 7) && <span className="ml-1 opacity-50 text-[8px]">(DEPAN)</span>}
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                ) : selectedCategory === 'Tagihan Bulanan' && selectedCustomerId ? (
+                  <div className="bg-emerald-50 border-2 border-emerald-100 p-6 rounded-3xl flex items-center justify-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-emerald-600" />
+                    <span className="text-xs font-black text-emerald-800 uppercase tracking-widest">Semua Tagihan Sudah Lunas</span>
+                  </div>
+                ) : null}
+
+                <div className="space-y-4">
+                   <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.1em] px-1">Konfirmasi Nominal</label>
+                   <div className="bg-slate-900 border-b-8 border-slate-950 p-10 rounded-[2.5rem] text-center shadow-lg overflow-hidden relative group">
+                      <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <Coins className="w-20 h-20 text-white" />
+                      </div>
+                      <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-2">Total Terima Uang</p>
+                      <p className={cn(
+                        "text-5xl font-black tracking-tighter leading-none mb-4 transition-all",
+                        totalAmount > 0 ? "text-emerald-400" : "text-white/20"
+                      )}>
+                        Rp {totalAmount.toLocaleString()}
+                      </p>
+                      {selectedCategory === 'Tagihan Bulanan' && selectedPeriods.length > 0 && (
+                         <div className="bg-white/5 py-2 px-4 rounded-full inline-flex items-center gap-2">
+                           <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Pembayaran untuk</span>
+                           <span className="text-[9px] font-black text-emerald-400 uppercase">{selectedPeriods.length} BULAN</span>
+                         </div>
+                      )}
+                   </div>
+                </div>
+
+                <button 
+                  type="submit" 
+                  disabled={loading || !selectedCustomerId || (selectedCategory === 'Tagihan Bulanan' && selectedPeriods.length === 0)}
+                  className="w-full bg-indigo-600 hover:bg-black text-white py-10 rounded-[3rem] font-black text-2xl uppercase tracking-[0.2em] shadow-lg transition-all active:scale-95 disabled:opacity-30 flex flex-col items-center justify-center gap-1 group"
+                >
+                  <div className="flex items-center gap-3">
+                     {loading ? <RefreshCw className="w-8 h-8 animate-spin" /> : <CheckCircle className="w-8 h-8 group-hover:scale-110 transition-transform" />}
+                     <span>SIMPAN & CETAK</span>
+                  </div>
+                  <span className="text-[10px] text-white/50 font-bold uppercase tracking-widest group-disabled:hidden">STRUK AKAN OTOMATIS DICETAK</span>
+                </button>
+              </form>
+            </motion.div>
+
+            {/* History Card Moved Here */}
+            <div className="space-y-6 pt-6">
+              <div className="flex items-center justify-between px-2">
+                <h3 className="font-black text-lg flex items-center gap-3 text-slate-800">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                    <History className="w-4 h-4" />
+                  </div>
+                  Riwayat Setoran Hari Ini
+                </h3>
+              </div>
+              <div className="space-y-4">
+                {transactions.slice(0, 10).map((t) => (
+                  <motion.div 
+                    key={t.id} 
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="relative overflow-hidden bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all group"
+                  >
+                    <div className="absolute inset-y-0 left-0 w-1.5 flex flex-col">
+                       <div className={cn("flex-1", t.status === 'confirmed' ? "bg-emerald-400" : t.status === 'deposited' ? "bg-amber-400" : "bg-slate-200")}></div>
+                    </div>
+                    <div className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className={cn(
+                            "w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg",
+                            t.type === 'pemasukan' ? "bg-emerald-500 shadow-emerald-100" : "bg-rose-500 shadow-rose-100"
+                          )}>
+                            {t.type === 'pemasukan' ? <PlusCircle className="w-6 h-6" /> : <MinusCircle className="w-6 h-6" />}
+                          </div>
+                          <div>
+                            <p className="font-black text-slate-800 text-base leading-tight">{t.customer_name || t.category}</p>
+                            <p className="text-xs text-slate-400 font-bold uppercase tracking-tight mt-0.5">
+                              {t.customer_name ? t.category : t.description}
+                              {t.billing_period && t.category === 'Tagihan Bulanan' && ` - ${t.billing_period.split(',').map(p => formatPeriod(p.trim())).join(', ')}`}
+                            </p>
+                            <p className="text-[10px] text-indigo-400 font-black uppercase mt-1 flex items-center gap-1.5">
+                              <UserCheck className="w-3 h-3" /> {t.collector_name || user.name}
+                              <span className="text-slate-300 mx-1">•</span>
+                              <Calendar className="w-3 h-3" /> {t.transaction_date}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className={cn("text-xl font-black tabular-nums tracking-tighter", t.type === 'pemasukan' ? "text-emerald-600" : "text-rose-600")}>
+                            {t.type === 'pemasukan' ? '+' : '-'} Rp {t.amount.toLocaleString()}
+                          </p>
+                          <div className="flex gap-2 justify-end mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                             <button onClick={() => printTransaction(t.id)} className="w-10 h-10 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-900 hover:text-white transition-all flex items-center justify-center shadow-sm">
+                                <Printer className="w-4 h-4" />
+                             </button>
+                             <button onClick={() => onShowReceipt && onShowReceipt(t, t.collector_name || user.name)} className="w-10 h-10 bg-slate-100 text-slate-600 rounded-xl hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center shadow-sm">
+                                <Eye className="w-4 h-4" />
+                             </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Side Info Area - Desktop Sidebar */}
+          <div className="lg:col-span-4 space-y-8">
+             {/* Summary Tooltips */}
+              <div className="bg-indigo-600 p-8 rounded-[3rem] text-white shadow-2xl shadow-indigo-200 border-b-8 border-indigo-800 flex flex-col justify-between min-h-[220px]">
+                 <div>
+                   <p className="text-xs font-black text-indigo-100 uppercase tracking-widest mb-2 flex items-center gap-2">
+                     <Wallet className="w-4 h-4" /> Uang yang Anda Pegang
+                   </p>
+                   <p className="text-5xl font-black tracking-tighter leading-none mb-2">Rp {heldBalance.toLocaleString()}</p>
+                   <p className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider">Silakan setorkan ke Admin jika sudah banyak</p>
+                 </div>
+                 <button 
+                   onClick={handleDeposit}
+                   disabled={heldBalance === 0}
+                   className="mt-8 w-full bg-white text-indigo-600 py-5 rounded-[2rem] font-black text-sm uppercase tracking-[0.1em] active:scale-95 transition-all shadow-xl shadow-indigo-900/20 disabled:opacity-50 flex items-center justify-center gap-3"
+                 >
+                   <Coins className="w-5 h-5" /> KONFIRMASI SETORAN
+                 </button>
+              </div>
+             
+             <div className="grid grid-cols-2 lg:grid-cols-1 gap-4">
+               {/* Printer Card */}
+               <div 
+                 onClick={() => setShowPrinterSettings(!showPrinterSettings)}
+                 className={cn(
+                   "p-5 rounded-[2rem] border transition-all active:scale-95 cursor-pointer flex flex-col justify-between",
+                   showPrinterSettings ? "bg-slate-900 border-slate-900 shadow-xl" : "bg-white border-slate-100 shadow-sm"
+                 )}
+               >
+                  <div className={cn(
+                    "w-10 h-10 rounded-xl flex items-center justify-center mb-3",
+                    showPrinterSettings ? "bg-white/10 text-white" : "bg-indigo-50 text-indigo-600"
+                  )}>
+                     <Printer className="w-5 h-5" />
+                  </div>
+                  <div>
+                     <p className={cn("text-[8px] font-black uppercase tracking-widest leading-none mb-1", showPrinterSettings ? "text-slate-500" : "text-slate-400")}>Printer</p>
+                     <p className={cn("text-sm font-black", showPrinterSettings ? "text-white" : "text-slate-800")}>PENGATURAN</p>
+                  </div>
+               </div>
+
+               {/* Info Card - Simplified for Desktop Sidebar */}
+               <div className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col justify-between">
+                  <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-3">
+                     <Target className="w-5 h-5" />
+                  </div>
+                  <div>
+                     <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Status</p>
+                     <p className="text-sm font-black text-emerald-600">Online & Ready</p>
+                  </div>
+               </div>
+             </div>
+
+             {/* Recent Transactions List on Desktop Side */}
+             <div className="hidden lg:block bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm">
+                <div className="flex items-center justify-between mb-6">
+                   <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Aktivitas Terakhir</h3>
+                   <History className="w-4 h-4 text-slate-300" />
+                </div>
+                <div className="space-y-4">
+                   {transactions.slice(0, 5).map(t => (
+                      <div key={t.id} className="flex items-center justify-between">
+                         <div className="flex items-center gap-3">
+                            <div className={cn("w-2 h-2 rounded-full", t.type === 'pemasukan' ? "bg-emerald-500" : "bg-rose-500")} />
+                            <p className="text-[10px] font-bold text-slate-600">{t.customer_name || t.category}</p>
+                         </div>
+                         <p className="text-[10px] font-black tabular-nums">Rp {t.amount.toLocaleString()}</p>
+                      </div>
+                   ))}
+                </div>
+             </div>
+          </div>
+        </div>        {/* Printer Settings Overlay (Mobile Only - will be shown as modal or relative) */}
         <AnimatePresence>
           {showPrinterSettings && (
             <motion.div 
@@ -1389,376 +1705,33 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
                animate={{ opacity: 1 }}
                exit={{ opacity: 0 }}
                transition={{ duration: 0.2 }}
-               className="bg-indigo-600 rounded-3xl p-5 overflow-hidden"
+               className="bg-indigo-600 rounded-3xl p-8 overflow-hidden lg:max-w-md mx-auto"
             >
                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-white font-black text-xs uppercase tracking-widest">Printer Thermal</h4>
-                  <div className="px-3 py-1 bg-white/20 rounded-full text-[8px] font-black text-white uppercase">Bluetooth Mode</div>
+                  <h4 className="text-white font-black text-sm uppercase tracking-[0.2em]">Konfigurasi Printer</h4>
+                  <div className="px-3 py-1 bg-white/20 rounded-full text-[8px] font-black text-white uppercase tracking-widest leading-none">Bluetooth Mode</div>
                </div>
-               <p className="text-white/70 text-[10px] leading-relaxed mb-4">Pastikan printer thermal 58mm/80mm Anda sudah terkoneksi dengan HP melalui Bluetooth. Sistem akan otomatis memanggil aplikasi printer thermal saat mencetak.</p>
-               <button 
+               <p className="text-indigo-100 text-[10px] leading-relaxed mb-6">Pastikan printer thermal 58mm/80mm Anda sudah terkoneksi dengan HP melalui Bluetooth. Sistem akan otomatis memanggil aplikasi printer thermal saat mencetak.</p>
+               <div className="space-y-2">
+                 <button 
                   onClick={() => window.print()}
                   className="w-full bg-white text-indigo-600 py-3 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2"
-               >
+                 >
                   <Wifi className="w-4 h-4" /> Tes Cetak Sekarang
-               </button>
+                 </button>
+                 <button 
+                  onClick={() => setShowPrinterSettings(false)}
+                  className="w-full bg-indigo-500 text-white py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all"
+                 >
+                  Tutup Pengaturan
+                 </button>
+               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-
-      <header className="mb-6">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-3 h-3 rounded-full bg-emerald-500 shadow shadow-emerald-200"></div>
-          <h2 className="text-3xl font-black tracking-tight text-slate-800 font-sans">Input Tagihan</h2>
-        </div>
-        <p className="text-slate-500 text-sm font-medium">Layanan pencatatan pembayaran pelanggan</p>
-      </header>
-
-      {/* Input Form Card */}
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.2 }}
-        className="bg-white rounded-[3rem] p-8 md:p-10 shadow-lg border border-slate-100"
-      >
-        <form onSubmit={handleSubmit} className="space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-2">
-              <div className="flex justify-between items-center px-1">
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.1em]">Cari Pelanggan</label>
-                <button 
-                  type="button"
-                  onClick={() => setShowQuickAdd(true)}
-                  className="text-[10px] font-black text-indigo-600 hover:text-indigo-700 flex items-center gap-1 uppercase tracking-widest"
-                >
-                  <Plus className="w-3 h-3" /> Pelanggan Baru
-                </button>
-              </div>
-              <div className="relative">
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Masukkan nama atau alamat..."
-                    value={searchTerm}
-                    onChange={(e) => {
-                      setSearchTerm(e.target.value);
-                      setShowCustomerList(true);
-                    }}
-                    onFocus={() => setShowCustomerList(true)}
-                    className="w-full bg-slate-50 text-slate-900 border-2 border-slate-100 px-6 py-5 rounded-[1.5rem] focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-bold text-lg pr-12 placeholder:text-slate-300"
-                  />
-                  {searchTerm && (
-                    <button 
-                      type="button"
-                      onClick={() => {
-                        setSelectedCustomerId('');
-                        setSearchTerm('');
-                        setSelectedPeriods([]);
-                      }}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500 transition-colors"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  )}
-                </div>
-                <input type="hidden" name="customer_id" value={selectedCustomerId} />
-                
-                {showCustomerList && (
-                  <div className="absolute z-[110] left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-indigo-100 max-h-72 overflow-y-auto overflow-x-hidden p-2">
-                    <div className="px-3 py-2 border-b border-slate-50 mb-1 flex justify-between items-center">
-                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Pilih Pelanggan ({filteredCustomers.length})</p>
-                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                    </div>
-                    {filteredCustomers.length > 0 ? (
-                      filteredCustomers.map(c => (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedCustomerId(String(c.id));
-                            setSearchTerm(c.name);
-                            setShowCustomerList(false);
-                          }}
-                          className="w-full text-left px-5 py-4 hover:bg-indigo-50/50 rounded-xl transition-all border-b last:border-0 border-slate-50 active:scale-[0.98] group"
-                        >
-                          <div className="font-bold text-slate-900 flex items-center justify-between mb-0.5">
-                            <span className="group-hover:text-indigo-600 transition-colors">{c.name}</span>
-                            {getUnpaidMonthsList(c).length === 0 ? (
-                              <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">LUNAS</span>
-                            ) : (
-                              <span className="text-[9px] font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100">{getUnpaidMonthsList(c).length} BLN</span>
-                            )}
-                          </div>
-                          <div className="text-[10px] text-slate-500 uppercase flex justify-between items-center opacity-70">
-                            <span className="truncate max-w-[150px] italic">{c.address}</span>
-                            <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-[8px]">ID: {c.id}</span>
-                          </div>
-                        </button>
-                      ))
-                    ) : (
-                      <div className="px-5 py-8 text-center">
-                        <UserX className="w-10 h-10 mx-auto text-slate-200 mb-2" />
-                        <p className="text-slate-400 italic text-xs font-bold uppercase tracking-tight">Pelanggan tidak ditemukan</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {/* Backdrop handle to close on click outside */}
-                {showCustomerList && (
-                  <div 
-                    className="fixed inset-0 z-[105]" 
-                    onClick={() => setShowCustomerList(false)}
-                  />
-                )}
-              </div>
-            </div>
-            <div className="space-y-4">
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.1em] px-1">Pilih Keterangan Setoran</label>
-              <div className="grid grid-cols-2 gap-3">
-                {['Tagihan Bulanan', 'Pemasangan Baru', 'Denda', 'Voucher', 'Lain-lain'].map((cat) => (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => setSelectedCategory(cat)}
-                    className={cn(
-                      "py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border-2",
-                      selectedCategory === cat 
-                        ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200 scale-[1.02]" 
-                        : "bg-slate-50 border-slate-100 text-slate-400 hover:border-slate-200"
-                    )}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {selectedCategory === 'Tagihan Bulanan' && unpaidMonthsList.length > 0 ? (
-            <motion.div 
-               initial={{ opacity: 0 }}
-               animate={{ opacity: 1 }}
-               transition={{ duration: 0.2 }}
-               className="space-y-4"
-            >
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.1em] px-1">Pilih Bulan yang Dibayar (Bisa pilih banyak)</label>
-              <div className="flex flex-wrap gap-2">
-                {unpaidMonthsList.map(m => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => togglePeriod(m)}
-                    className={cn(
-                      "px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border-2",
-                      selectedPeriods.includes(m) 
-                        ? "bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-100 scale-110 z-10" 
-                        : "bg-slate-50 border-slate-100 text-slate-400 hover:border-slate-200"
-                    )}
-                  >
-                    {formatPeriod(m)}
-                    {m > new Date().toISOString().slice(0, 7) && <span className="ml-1 opacity-50 text-[8px]">(DEPAN)</span>}
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          ) : selectedCategory === 'Tagihan Bulanan' && selectedCustomerId ? (
-            <div className="bg-emerald-50 border-2 border-emerald-100 p-6 rounded-3xl flex items-center justify-center gap-3">
-              <CheckCircle className="w-5 h-5 text-emerald-600" />
-              <span className="text-xs font-black text-emerald-800 uppercase tracking-widest">Semua Tagihan Sudah Lunas</span>
-            </div>
-          ) : null}
-
-          <div className="space-y-4">
-             <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.1em] px-1">Konfirmasi Nominal</label>
-             <div className="bg-slate-900 border-b-8 border-slate-950 p-10 rounded-[2.5rem] text-center shadow-lg overflow-hidden relative group">
-                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                  <Coins className="w-20 h-20 text-white" />
-                </div>
-                <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-2">Total Terima Uang</p>
-                <p className={cn(
-                  "text-5xl font-black tracking-tighter leading-none mb-4 transition-all",
-                  totalAmount > 0 ? "text-emerald-400" : "text-white/20"
-                )}>
-                  Rp {totalAmount.toLocaleString()}
-                </p>
-                {selectedCategory === 'Tagihan Bulanan' && selectedPeriods.length > 0 && (
-                   <div className="bg-white/5 py-2 px-4 rounded-full inline-flex items-center gap-2">
-                     <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Pembayaran untuk</span>
-                     <span className="text-[9px] font-black text-emerald-400 uppercase">{selectedPeriods.length} BULAN</span>
-                   </div>
-                )}
-             </div>
-          </div>
-
-          <button 
-            type="submit" 
-            disabled={loading || !selectedCustomerId || (selectedCategory === 'Tagihan Bulanan' && selectedPeriods.length === 0)}
-            className="w-full bg-indigo-600 hover:bg-black text-white py-8 rounded-[3rem] font-black text-xl uppercase tracking-[0.2em] shadow-lg transition-all active:scale-95 disabled:opacity-30 flex flex-col items-center justify-center gap-1 group"
-          >
-            <div className="flex items-center gap-3">
-               {loading ? <RefreshCw className="w-6 h-6 animate-spin" /> : <CheckCircle className="w-6 h-6 group-hover:scale-110 transition-transform" />}
-               <span>SIMPAN SEKARANG</span>
-            </div>
-            <span className="text-[9px] text-white/50 font-bold uppercase tracking-widest group-disabled:hidden">Struk akan otomatis dibuat</span>
-          </button>
-        </form>
-      </motion.div>
-
-      {/* History Card */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-bold text-lg flex items-center gap-2">
-            <History className="w-5 h-5 text-indigo-600" />
-            Riwayat Setoran Hari Ini
-          </h3>
-        </div>
-        <div className="space-y-3">
-          {transactions.slice(0, 10).map((t) => (
-            <motion.div 
-              key={t.id} 
-              layout
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="relative overflow-hidden bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-indigo-500/5 transition-all group"
-            >
-              {/* Status Indicator */}
-              <div className="absolute inset-y-0 left-0 w-1 flex flex-col">
-                 <div className={cn("flex-1", t.status === 'confirmed' ? "bg-emerald-400" : t.status === 'deposited' ? "bg-amber-400" : "bg-slate-200")}></div>
-              </div>
-
-              {/* Background Action (Revealed via Drag) */}
-              <div className="absolute inset-0 bg-indigo-50 flex items-center justify-end px-6 gap-3">
-                 <button onClick={() => printTransaction(t.id)} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-200 flex items-center justify-center">
-                    <Printer className="w-6 h-6" />
-                 </button>
-              </div>
-
-              <motion.div 
-                drag="x"
-                dragConstraints={{ left: -80, right: 0 }}
-                dragElastic={0.1}
-                className="bg-white p-4 relative z-10"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg",
-                      t.type === 'pemasukan' ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
-                    )}>
-                      {t.type === 'pemasukan' ? <PlusCircle className="w-6 h-6" /> : <MinusCircle className="w-6 h-6" />}
-                    </div>
-                    <div>
-                      <p className="font-black text-slate-800 text-sm whitespace-nowrap overflow-hidden text-ellipsis max-w-32">{t.customer_name || t.category}</p>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">
-                        {t.customer_name ? t.category : t.description}
-                        {t.billing_period && t.category === 'Tagihan Bulanan' && ` - ${t.billing_period.split(',').map(p => formatPeriod(p.trim())).join(', ')}`}
-                      </p>
-                      <p className="text-[8px] text-indigo-400 font-black uppercase mt-1 flex items-center gap-1">
-                        <UserCheck className="w-2 h-2" /> Petugas: {t.collector_name || user.name}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className={cn(
-                      "font-black text-sm tabular-nums",
-                      t.type === 'pemasukan' ? "text-emerald-600" : "text-rose-600"
-                    )}>
-                      {t.type === 'pemasukan' ? '+' : '-'} {new Intl.NumberFormat('id-ID').format(t.amount)}
-                    </p>
-                    <p className="text-[9px] text-slate-300 font-black uppercase tracking-tighter flex items-center gap-2 justify-end">
-                       <span className="flex items-center gap-1"><Printer className="w-2 h-2" /> Geser</span>
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-            </motion.div>
-          ))}
-          {transactions.length === 0 && (
-            <div className="text-center py-10 text-slate-400 border-2 border-dashed border-slate-100 rounded-2xl">
-              Belum ada setoran hari ini.
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Unpaid Customers Section */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-bold text-lg flex items-center gap-2">
-            <CalendarCheck2 className="w-5 h-5 text-rose-500" />
-            Penagihan Belum Lunas ({new Date().toLocaleString('id-ID', { month: 'long' })})
-          </h3>
-          <span className="text-[10px] font-bold bg-rose-50 text-rose-600 px-2 py-1 rounded-full uppercase">
-            {customers.filter(c => getUnpaidMonthsList(c).length > 0).length} Menunggak
-          </span>
-        </div>
-        <div className="grid grid-cols-1 gap-3">
-          {customers
-            .map(c => ({ ...c, unpaid: getUnpaidMonthsList(c) }))
-            .filter(c => c.unpaid.length > 0)
-            .map((c) => {
-              const amountMatch = c.packet.match(/Rp\s?([\d.,]+)/);
-              const price = amountMatch ? amountMatch[1] : '0';
-              
-              return (
-                <motion.div 
-                  key={c.id}
-                  whileHover={{ x: 5 }}
-                  onClick={() => {
-                    setSelectedCustomerId(String(c.id));
-                    setSearchTerm(c.name);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className="bg-white p-5 rounded-2xl border-l-4 border-l-rose-500 border-y border-r border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer group"
-                >
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="font-bold text-slate-800">{c.name}</p>
-                        <span className="text-[9px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase">{c.packet.split(' - ')[0]}</span>
-                      </div>
-                      <p className="text-[10px] text-slate-400 font-medium mb-3">{c.address}</p>
-                      
-                      <div className="flex flex-wrap gap-1.5">
-                        {c.unpaid.map(m => (
-                          <span key={m} className="text-[9px] font-black bg-rose-50 text-rose-500 px-2 py-1 rounded-md border border-rose-100 uppercase tracking-tighter">
-                            {formatPeriod(m)}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-6 text-right shrink-0">
-                      <div>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Tunggakan</p>
-                        <p className="text-sm font-black text-rose-600">{c.unpaid.length} Bulan</p>
-                      </div>
-                      <div className="hidden sm:block">
-                        <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Estimasi Total</p>
-                        <p className="text-xs font-mono font-bold text-slate-600">
-                          Rp {(parseInt(price.replace(/[.,]/g, '')) * c.unpaid.length).toLocaleString()}
-                        </p>
-                      </div>
-                      <div className="w-10 h-10 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center group-hover:bg-rose-500 group-hover:text-white transition-colors">
-                        <Plus className="w-5 h-5" />
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })}
-          {customers.filter(c => getUnpaidMonthsList(c).length > 0).length === 0 && (
-            <div className="text-center py-10 bg-emerald-50 border-2 border-dashed border-emerald-100 rounded-2xl">
-              <Check className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-              <p className="text-emerald-700 font-bold">Luar Biasa! Semua pelanggan sudah lunas.</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <AnimatePresence>
-        {showQuickAdd && (
+        <AnimatePresence>
+          {showQuickAdd && (
           <div className="fixed inset-0 bg-slate-900/80 z-[100] flex items-center justify-center p-4">
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
@@ -1972,15 +1945,15 @@ function ReceiptPreviewModal({ transaction, userName, settings, onClose }: { tra
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        transition={{ duration: 0.2 }}
-        className="absolute inset-0 bg-slate-900/90" 
+        transition={{ duration: 0.15 }}
+        className="absolute inset-0 bg-slate-900/60 backdrop-blur-[2px] will-change-[opacity]" 
       />
       <motion.div 
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 10 }}
-        transition={{ duration: 0.2 }}
-        className="relative bg-slate-100 w-full max-w-sm rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.98 }}
+        transition={{ duration: 0.15 }}
+        className="relative bg-slate-100 w-full max-w-sm rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] will-change-transform"
       >
         <div className="p-6 bg-white flex items-center justify-between border-b border-slate-100">
            <div>
@@ -2273,15 +2246,15 @@ function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigg
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => { setShowForm(false); setEditingCustomer(null); }}
-              transition={{ duration: 0.2 }}
-              className="absolute inset-0 bg-slate-900/80" 
+              transition={{ duration: 0.15 }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-[2px] will-change-[opacity]" 
             />
             <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              transition={{ duration: 0.2 }}
-              className="relative bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.15 }}
+              className="relative bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden will-change-transform"
             >
               <div className="p-8 bg-white border-b border-slate-100 flex items-center justify-between">
                  <div>
@@ -2366,9 +2339,8 @@ function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigg
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filtered.map(c => (
-          <motion.div 
+          <div 
             key={c.id} 
-            layout
             className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-indigo-500/10 transition-all group relative overflow-hidden"
           >
              <div className="flex justify-between items-start mb-6">
@@ -2586,7 +2558,7 @@ function PacketManagement({ user, refreshTrigger }: { user: User, refreshTrigger
                        </button>
                     </div>
                     <div className="flex -space-x-2">
-                       {[1,2,3].map(i => <div key={i} className="w-6 h-6 rounded-full bg-slate-100 border-2 border-white"></div>)}
+                       {[1,2,3].map(i => <div key={i} className="w-6 h-6 rounded-full bg-slate-100 border-2 border-white shrink-0"></div>)}
                     </div>
                  </div>
               </div>
@@ -3033,67 +3005,42 @@ function StatCard({ title, amount, icon, color, settings }: { title: string, amo
   const isNegative = amount < 0;
   
   const colorMap = {
-    indigo: {
-      bg: 'bg-indigo-50',
-      iconBg: 'bg-indigo-500/10',
-      text: 'text-indigo-600',
-      accent: 'bg-indigo-600'
-    },
-    emerald: {
-      bg: 'bg-emerald-50',
-      iconBg: 'bg-emerald-500/10',
-      text: 'text-emerald-600',
-      accent: 'bg-emerald-600'
-    },
-    rose: {
-      bg: 'bg-rose-50',
-      iconBg: 'bg-rose-500/10',
-      text: 'text-rose-600',
-      accent: 'bg-rose-600'
-    },
-    amber: {
-      bg: 'bg-amber-50',
-      iconBg: 'bg-amber-500/10',
-      text: 'text-amber-600',
-      accent: 'bg-amber-600'
-    }
+    indigo: { bg: 'bg-indigo-50', text: 'text-indigo-600', border: 'border-indigo-50', accent: 'bg-indigo-500' },
+    emerald: { bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-50', accent: 'bg-emerald-500' },
+    rose: { bg: 'bg-rose-50', text: 'text-rose-600', border: 'border-rose-50', accent: 'bg-rose-500' },
+    amber: { bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-50', accent: 'bg-amber-500' }
   };
 
   const style = colorMap[color] || colorMap.indigo;
 
   return (
     <motion.div 
-      whileHover={{ y: -4 }}
-      className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 relative overflow-hidden group transition-all duration-300"
+      whileHover={{ y: -6, scale: 1.02 }}
+      className={cn(
+        "bg-white p-8 rounded-[2.5rem] border transition-all duration-500 flex flex-col justify-between min-h-[180px] shadow-sm hover:shadow-2xl hover:shadow-indigo-500/5",
+        style.border
+      )}
     >
-      <div className={cn(
-        "absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rounded-full opacity-[0.03] group-hover:opacity-[0.08] transition-all duration-500",
-        style.accent
-      )} />
-      
-      <div className="flex items-center gap-4 mb-4 relative z-10 text-slate-100">
-        <div className={cn("p-3 rounded-2xl transition-transform group-hover:scale-110", style.bg)}>
+      <div className="flex justify-between items-start">
+        <div className={cn("p-4 rounded-2xl shadow-lg transition-transform group-hover:scale-110", style.bg, style.text)}>
           {icon}
         </div>
-        <div>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{title}</p>
-          <div className="h-0.5 w-6 rounded-full bg-slate-100 mt-1" />
+        <div className="flex flex-col items-end opacity-40">
+           <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] leading-none mb-1">Status</span>
+           <div className="flex items-center gap-1">
+             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+             <span className="text-[9px] font-black text-slate-500 uppercase tracking-tight">Aktif</span>
+           </div>
         </div>
       </div>
-      
-      <p className={cn(
-        "text-2xl font-black tracking-tight tabular-nums relative z-10",
-        isNegative ? "text-rose-600" : "text-slate-800"
-      )}>
-        {settings?.currency_symbol || 'Rp'} {Math.abs(amount).toLocaleString('id-ID')}
-      </p>
-      
-      <div className="absolute bottom-0 left-0 right-0 h-1 bg-slate-50 overflow-hidden rounded-full mx-6 mb-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <motion.div 
-          initial={{ width: 0 }}
-          whileInView={{ width: '100%' }}
-          className={cn("h-full", style.accent)} 
-        />
+      <div>
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">{title}</p>
+        <p className={cn(
+          "text-3xl font-black tracking-tighter tabular-nums leading-none",
+          isNegative ? "text-rose-600" : "text-slate-900"
+        )}>
+          {settings?.currency_symbol || 'Rp'} {Math.abs(amount).toLocaleString('id-ID')}
+        </p>
       </div>
     </motion.div>
   );
@@ -3144,15 +3091,15 @@ function TransactionModal({ user, isAdmin, onClose, onSuccess }: { user: User, i
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        transition={{ duration: 0.2 }}
-        className="absolute inset-0 bg-slate-900/90" 
+        transition={{ duration: 0.15 }}
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] will-change-[opacity]" 
       />
       <motion.div 
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 10 }}
-        transition={{ duration: 0.2 }}
-        className="relative bg-slate-50 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden"
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.98 }}
+        transition={{ duration: 0.15 }}
+        className="relative bg-slate-50 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden will-change-transform"
       >
         <div className="bg-white p-6 border-b border-slate-100 flex items-center justify-between">
            <div>
