@@ -401,13 +401,12 @@ async function startServer() {
   app.get('/api/customers', authMiddleware, (req, res) => {
     try {
       const customers = db.prepare(`
-        SELECT c.*, u.name as collector_name,
+        SELECT c.*,
                (SELECT group_concat(billing_period) FROM transactions t 
                 WHERE t.customer_id = c.id 
                 AND t.category = 'Tagihan Bulanan'
                 AND t.status != 'cancelled') as paid_months
         FROM customers c 
-        LEFT JOIN users u ON c.collector_id = u.id
         ORDER BY name ASC
       `).all();
       res.json(customers);

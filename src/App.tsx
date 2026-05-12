@@ -2176,7 +2176,6 @@ function Receipt({ transaction, userName, settings }: { transaction: Transaction
 function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigger?: number }) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [packets, setPackets] = useState<Packet[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [isOldCustomer, setIsOldCustomer] = useState(false);
@@ -2184,14 +2183,12 @@ function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigg
 
   const fetchData = async () => {
     try {
-      const [custRes, packRes, userRes] = await Promise.all([
+      const [custRes, packRes] = await Promise.all([
         fetch('/api/customers', { headers: { 'x-user-id': String(user.id) } }),
-        fetch('/api/packets', { headers: { 'x-user-id': String(user.id) } }),
-        fetch('/api/users', { headers: { 'x-user-id': String(user.id) } })
+        fetch('/api/packets', { headers: { 'x-user-id': String(user.id) } })
       ]);
       if (custRes.ok) setCustomers(await custRes.json());
       if (packRes.ok) setPackets(await packRes.json());
-      if (userRes.ok) setUsers(await userRes.json());
     } catch (err) {
       console.error('Failed to fetch customer management data:', err);
     }
@@ -2339,15 +2336,6 @@ function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigg
                        <input name="phone" defaultValue={editingCustomer?.phone} placeholder="62812..." className="w-full bg-slate-50 border-none h-14 px-6 rounded-2xl font-bold text-slate-700 outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all" />
                     </div>
                     <div className="space-y-2">
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Petugas Penagih</label>
-                       <select name="collector_id" defaultValue={editingCustomer?.collector_id} className="w-full bg-slate-50 border-none h-14 px-6 rounded-2xl font-bold text-slate-700 outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all appearance-none">
-                          <option value="">-- PILIH PENAGIH --</option>
-                          {users.filter(u => u.role === 'penagih').map(u => (
-                            <option key={u.id} value={u.id}>{u.name}</option>
-                          ))}
-                       </select>
-                    </div>
-                    <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Paket Layanan</label>
                       <select name="packet" defaultValue={editingCustomer?.packet} className="w-full bg-slate-50 border-none h-14 px-6 rounded-2xl font-bold text-slate-700 outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all appearance-none" required>
                         <option value="">-- PILIH PAKET --</option>
@@ -2429,12 +2417,6 @@ function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigg
              </div>
 
              <div className="bg-slate-50/50 p-4 rounded-3xl border border-dashed border-slate-200 space-y-3">
-                <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest leading-none">
-                   <span className="text-slate-400">Petugas Penagih</span>
-                   <span className="text-indigo-500 font-bold bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100 flex items-center gap-1">
-                      <UserCheck className="w-2.5 h-2.5" /> {(c as any).collector_name || 'BELUM DISET'}
-                   </span>
-                </div>
                 <div className="flex justify-between items-center">
                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Mulai Berlangganan</span>
                    <span className="text-[10px] font-bold text-slate-700 flex items-center gap-1">
