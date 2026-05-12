@@ -3334,7 +3334,11 @@ function PaymentReport({ user, refreshTrigger }: { user: User, refreshTrigger?: 
                       </div>
                     </td>
                     {months.map(m => {
-                      const payment = data.find(d => d.customer_name === c && d.billing_period === m);
+                      const payment = data.find(d => 
+                        d.customer_name === c && 
+                        d.billing_period && 
+                        d.billing_period.split(',').includes(m)
+                      );
                       const customerInfo = data.find(d => d.customer_name === c);
                       const registrationMonth = customerInfo?.customer_created_at?.slice(0, 7) || '2000-01';
                       const isAfterRegistration = m >= registrationMonth;
@@ -3370,12 +3374,12 @@ function PaymentReport({ user, refreshTrigger }: { user: User, refreshTrigger?: 
                               shouldBePaid ? "bg-rose-50 border border-rose-200 text-rose-500 shadow-inner group/unpaid relative" : "bg-slate-50 border border-slate-100 text-slate-200"
                             )}>
                                {shouldBePaid ? (
-                                 <>
+                                 <div className="flex items-center justify-center">
                                    <X className="w-3.5 h-3.5" />
-                                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover/unpaid:opacity-100 transition-opacity bg-rose-600 text-white text-[8px] py-1 px-2 rounded-lg whitespace-nowrap z-50 pointer-events-none font-bold">
+                                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover/unpaid:opacity-100 transition-opacity bg-rose-600 text-white text-[8px] py-1 px-2 rounded-lg whitespace-nowrap z-50 pointer-events-none font-bold shadow-lg">
                                       MENUNGGAK
                                    </div>
-                                 </>
+                                 </div>
                                ) : (
                                  <div className="w-1 h-1 rounded-full bg-slate-200" />
                                )}
