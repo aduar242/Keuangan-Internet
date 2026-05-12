@@ -40,7 +40,6 @@ import {
   UserCheck,
   UserX,
   Home,
-  SunMoon,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Transaction, DashboardStats, Customer, Packet, AppSettings } from './types';
@@ -116,24 +115,6 @@ export default function App() {
   const [receiptToPreview, setReceiptToPreview] = useState<{ transaction: Transaction; userName: string } | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [theme, setTheme] = useState<'light' | 'dark' | 'auto'>(() => {
-    const saved = localStorage.getItem('theme');
-    return (saved as 'light' | 'dark' | 'auto') || 'auto';
-  });
-
-  useEffect(() => {
-    const root = window.document.documentElement;
-    const isDark = 
-      theme === 'dark' || 
-      (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches) ||
-      (theme === 'auto' && (new Date().getHours() >= 18 || new Date().getHours() < 6));
-
-    if (isDark) {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-  }, [theme]);
 
   useEffect(() => {
     socket.on('transaction:created', () => setRefreshTrigger(prev => prev + 1));
@@ -276,13 +257,8 @@ export default function App() {
     return <LoginScreen onLogin={handleLogin} />;
   }
 
-  const isDarkActual = 
-    theme === 'dark' || 
-    (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches) ||
-    (theme === 'auto' && (new Date().getHours() >= 18 || new Date().getHours() < 6));
-
   return (
-    <div className={cn("min-h-screen flex flex-col md:flex-row bg-slate-50 dark:bg-slate-950 transition-colors duration-500", isDarkActual && "dark")}>
+    <div className="min-h-screen flex flex-col md:flex-row bg-slate-50 transition-colors duration-500">
       {/* Sidebar - Desktop */}
       <aside className="hidden md:flex w-64 bg-slate-900 border-r border-slate-800 flex-col p-6 space-y-8 sticky top-0 h-screen">
         <div className="flex items-center gap-3 text-white">
@@ -377,10 +353,10 @@ export default function App() {
               <Coins className="w-6 h-6 text-white" />
             </div>
             <div>
-              <span className="block font-black text-slate-900 dark:text-white tracking-tighter text-lg leading-none">{settings?.company_name || 'RT/RW NET'}</span>
+              <span className="block font-black text-slate-900 tracking-tighter text-lg leading-none">{settings?.company_name || 'RT/RW NET'}</span>
               <div className="flex items-center gap-1.5 mt-1">
                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{user.role}</span>
-                <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700"></span>
+                <span className="w-1 h-1 rounded-full bg-slate-300"></span>
                 <button 
                   onClick={checkPrinter}
                   disabled={printerStatus === 'checking'}
@@ -393,7 +369,7 @@ export default function App() {
             </div>
           </div>
           <button 
-            className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all"
+            className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 active:scale-95 transition-all"
             onClick={handleLogout}
           >
             <LogOut className="w-5 h-5" />
@@ -445,11 +421,6 @@ export default function App() {
                     deferredPrompt={deferredPrompt} 
                     onInstall={handleInstallClick} 
                     refreshTrigger={refreshTrigger}
-                    theme={theme}
-                    setTheme={(t) => {
-                      setTheme(t);
-                      localStorage.setItem('theme', t);
-                    }}
                   />
                 )}
                 {activeTab === 'history' && <AdminDashboard user={user} settings={settings} refreshTrigger={refreshTrigger} setRefreshTrigger={setRefreshTrigger} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
@@ -496,13 +467,13 @@ function SidebarLink({ icon, label, onClick, active = false }: { icon: React.Rea
 
 function MobileNav({ activeTab, setActiveTab, user }: { activeTab: string, setActiveTab: (t: string) => void, user: User }) {
   return (
-    <nav className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-sm bg-white/90 dark:bg-slate-900/90 shadow-2xl shadow-indigo-500/20 dark:shadow-none px-6 py-4 rounded-[2rem] flex items-center justify-between z-[100] border border-slate-200/50 dark:border-slate-800/50 backdrop-blur-2xl ring-1 ring-black/5 dark:ring-white/5">
-      <MobileNavItem active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home className="w-6 h-6" />} label="Home" />
-      <MobileNavItem active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} icon={<UsersIcon className="w-6 h-6" />} label="Pelanggan" />
+    <nav className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-sm bg-white shadow-2xl shadow-indigo-500/20 px-6 py-4 rounded-[2.5rem] flex items-center justify-between z-[100] border border-slate-200/50 backdrop-blur-2xl ring-1 ring-black/5">
+      <MobileNavItem active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home className="w-7 h-7" />} label="Utama" />
+      <MobileNavItem active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} icon={<UsersIcon className="w-7 h-7" />} label="Pelanggan" />
       {user.role === 'admin' ? (
-        <MobileNavItem active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings className="w-6 h-6" />} label="Set" />
+        <MobileNavItem active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings className="w-7 h-7" />} label="Menu" />
       ) : (
-        <MobileNavItem active={activeTab === 'history'} onClick={() => setActiveTab('history')} icon={<History className="w-6 h-6" />} label="History" />
+        <MobileNavItem active={activeTab === 'history'} onClick={() => setActiveTab('history')} icon={<History className="w-7 h-7" />} label="Riwayat" />
       )}
     </nav>
   );
@@ -511,15 +482,20 @@ function MobileNav({ activeTab, setActiveTab, user }: { activeTab: string, setAc
 function MobileNavItem({ active, onClick, icon, label }: { active: boolean, onClick: () => void, icon: React.ReactNode, label?: string }) {
   return (
     <button onClick={onClick} className={cn(
-      "flex flex-col items-center justify-center p-1.5 rounded-2xl transition-all duration-300 relative",
-      active ? "text-indigo-600 dark:text-indigo-400 scale-110" : "text-slate-400 dark:text-slate-500"
+      "flex flex-col items-center justify-center p-2 rounded-2xl transition-all duration-300 relative min-w-[70px]",
+      active ? "text-indigo-600 scale-110" : "text-slate-400"
     )}>
-      {icon}
-      {label && <span className="text-[8px] font-black uppercase tracking-widest mt-1">{label}</span>}
+      <div className={cn(
+        "p-2 rounded-2xl transition-all",
+        active ? "bg-indigo-50" : ""
+      )}>
+        {icon}
+      </div>
+      {label && <span className={cn("text-[10px] font-black uppercase tracking-widest mt-1", active ? "text-indigo-600" : "text-slate-400")}>{label}</span>}
       {active && (
         <motion.div 
           layoutId="mobile-nav-indicator"
-          className="absolute -top-1 w-1 h-1 bg-indigo-600 dark:bg-indigo-400 rounded-full"
+          className="absolute -bottom-1 w-6 h-1 bg-indigo-600 rounded-full"
         />
       )}
     </button>
@@ -763,9 +739,9 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
-            <h2 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white">Ringkasan Sistem</h2>
+            <h2 className="text-2xl font-black tracking-tight text-slate-800">Ringkasan Sistem</h2>
           </div>
-          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Monitoring arus kas dan operasional RT/RW Net</p>
+          <p className="text-slate-500 text-sm font-medium">Monitoring arus kas dan operasional RT/RW Net</p>
         </div>
         <div className="flex gap-3">
           <button onClick={() => setShowModal(true)} className="btn-primary group">
@@ -788,7 +764,7 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
         <motion.div 
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/50 rounded-[2rem] p-8 shadow-xl shadow-amber-500/5"
+          className="bg-amber-50 border border-amber-200 rounded-[2rem] p-8 shadow-xl shadow-amber-500/5"
         >
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
@@ -796,8 +772,8 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
                 <Coins className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-black text-amber-900 dark:text-amber-200 leading-tight">Konfirmasi Setoran</h3>
-                <p className="text-amber-700/60 dark:text-amber-400/60 text-xs font-bold uppercase tracking-widest">Uang fisik sudah siap diterima</p>
+                <h3 className="font-black text-amber-900 leading-tight">Konfirmasi Setoran</h3>
+                <p className="text-amber-700/60 text-xs font-bold uppercase tracking-widest">Uang fisik sudah siap diterima</p>
               </div>
             </div>
             <span className="hidden md:block text-[10px] font-black bg-amber-500 text-white px-3 py-1 rounded-full">ACTION REQUIRED</span>
@@ -805,10 +781,10 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {pendingDeposits.map(d => (
-              <div key={d.collector_id} className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-amber-200 dark:border-amber-800/50 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow group">
+              <div key={d.collector_id} className="bg-white p-5 rounded-2xl border border-amber-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow group">
                 <div className="mb-4">
-                  <p className="font-black text-slate-800 dark:text-slate-100 text-sm uppercase mb-1 tracking-tight">{d.collector_name}</p>
-                  <div className="flex items-center gap-2 text-[10px] text-slate-400 dark:text-slate-500 font-bold mb-3">
+                  <p className="font-black text-slate-800 text-sm uppercase mb-1 tracking-tight">{d.collector_name}</p>
+                  <div className="flex items-center gap-2 text-[10px] text-slate-400 font-bold mb-3">
                     <FileText className="w-3 h-3" />
                     <span>{d.transactionCount} TRANSAKSI BELUM DISETOR</span>
                   </div>
@@ -829,19 +805,19 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
       )}
 
       {/* Transactions List */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200 dark:border-slate-800 overflow-hidden">
-        <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between bg-white dark:bg-slate-900 gap-4">
+      <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden">
+        <div className="px-8 py-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between bg-white gap-4">
           <div>
-            <h3 className="font-black text-slate-800 dark:text-white tracking-tight">Log Transaksi Keluar Masuk</h3>
-            <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-1">Real-time update dari lapangan</p>
+            <h3 className="font-black text-slate-800 tracking-tight">Log Transaksi Keluar Masuk</h3>
+            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Real-time update dari lapangan</p>
           </div>
           <div className="flex items-center gap-3">
              <div className="relative group">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600 group-focus-within:text-indigo-500 transition-colors" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
                 <input 
                   type="text" 
                   placeholder="Cari transaksi..."
-                  className="pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 w-full md:w-64 transition-all dark:text-slate-200 dark:placeholder:text-slate-600"
+                  className="pl-9 pr-4 py-2 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 w-full md:w-64 transition-all"
                 />
              </div>
           </div>
@@ -858,7 +834,7 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
               className="relative overflow-hidden group border-b border-slate-50 last:border-0"
             >
               {/* Background Actions (Revealed via Drag) */}
-              <div className="absolute inset-0 bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 flex items-center justify-end px-6 gap-3">
+              <div className="absolute inset-0 bg-slate-50 border-b border-slate-100 flex items-center justify-end px-6 gap-3">
                  <button onClick={() => handleDelete(t.id)} className="w-12 h-12 bg-rose-500 text-white rounded-2xl shadow-lg shadow-rose-200 flex items-center justify-center">
                     <Trash2 className="w-6 h-6" />
                  </button>
@@ -872,7 +848,7 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
                 dragConstraints={{ left: -140, right: 0 }}
                 dragElastic={0.1}
                 whileDrag={{ scale: 1.02 }}
-                className="p-5 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors relative z-10 bg-white dark:bg-slate-900"
+                className="p-5 hover:bg-slate-50/50 transition-colors relative z-10 bg-white"
               >
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex items-center gap-3">
@@ -906,22 +882,22 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
                   </div>
                 </div>
                 
-                <div className="flex justify-between items-center mt-4 pt-3 border-t border-slate-50 dark:border-slate-800">
-                  <div className="text-[9px] text-slate-400 dark:text-slate-600 font-black uppercase tracking-widest flex items-center gap-3">
+                <div className="flex justify-between items-center mt-4 pt-3 border-t border-slate-50">
+                  <div className="text-[9px] text-slate-400 font-black uppercase tracking-widest flex items-center gap-3">
                     <span className="flex items-center gap-1"><Calendar className="w-3" /> {t.transaction_date.split('-').reverse().join('/')}</span>
                   </div>
                   <div className="text-right">
                     <div className={cn(
                       "font-black tabular-nums text-base",
-                      t.type === 'pemasukan' ? "text-emerald-600 dark:text-emerald-500" : "text-rose-600 dark:text-rose-500"
+                      t.type === 'pemasukan' ? "text-emerald-600" : "text-rose-600"
                     )}>
                       {t.type === 'pemasukan' ? '+' : '-'} {new Intl.NumberFormat('id-ID').format(t.amount)}
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-50 dark:border-slate-800 justify-center">
-                    <span className="text-[8px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-tighter">Geser ke kiri untuk aksi</span>
-                    <ArrowLeft className="w-3 h-3 text-slate-300 dark:text-slate-700 animate-pulse" />
+                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-50 justify-center">
+                    <span className="text-[8px] font-black text-slate-300 uppercase tracking-tighter">Geser ke kiri untuk aksi</span>
+                    <ArrowLeft className="w-3 h-3 text-slate-300 animate-pulse" />
                 </div>
               </motion.div>
             </motion.div>
@@ -937,7 +913,7 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="text-slate-400 dark:text-slate-500 text-[10px] uppercase tracking-[0.2em] font-black bg-slate-50/50 dark:bg-slate-800/50 backdrop-blur-md">
+              <tr className="text-slate-400 text-[10px] uppercase tracking-[0.2em] font-black bg-slate-50/50 backdrop-blur-md">
                 <th className="px-8 py-5">Tanggal</th>
                 <th className="px-8 py-5">Pelanggan / Kategori</th>
                 <th className="px-8 py-5 text-center">Status Bukti</th>
@@ -945,13 +921,13 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
                 <th className="px-8 py-5 text-center">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50 dark:divide-slate-800 text-sm">
+            <tbody className="divide-y divide-slate-50 text-sm">
               {transactions.map((t) => (
-                <tr key={t.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
-                  <td className="px-8 py-5 font-mono text-slate-400 dark:text-slate-600 text-xs">{t.transaction_date}</td>
+                <tr key={t.id} className="hover:bg-slate-50/50 transition-colors group">
+                  <td className="px-8 py-5 font-mono text-slate-400 text-xs">{t.transaction_date}</td>
                   <td className="px-8 py-5">
-                    <div className="font-black text-slate-800 dark:text-slate-200">{t.customer_name || t.category}</div>
-                    <div className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-tighter">
+                    <div className="font-black text-slate-800">{t.customer_name || t.category}</div>
+                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
                       {t.customer_name ? t.category : t.description}
                       {t.billing_period && t.category === 'Tagihan Bulanan' && ` - ${t.billing_period.split(',').map(p => formatPeriod(p.trim())).join(', ')}`}
                     </div>
@@ -959,9 +935,9 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
                   <td className="px-8 py-5 text-center">
                     <div className={cn(
                       "text-[9px] font-black uppercase px-3 py-1 rounded-full inline-flex items-center gap-1.5",
-                      t.status === 'confirmed' ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/50" : 
-                      t.status === 'deposited' ? "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-800/50" :
-                      "bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-600"
+                      t.status === 'confirmed' ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : 
+                      t.status === 'deposited' ? "bg-amber-50 text-amber-600 border border-amber-100" :
+                      "bg-slate-50 text-slate-400"
                     )}>
                       {t.status === 'confirmed' && <Check className="w-2.5 h-2.5" />}
                       {t.status}
@@ -969,7 +945,7 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
                   </td>
                   <td className={cn(
                     "px-8 py-5 text-right font-black tabular-nums text-base",
-                    t.type === 'pemasukan' ? "text-emerald-600 dark:text-emerald-500" : "text-rose-600 dark:text-rose-500"
+                    t.type === 'pemasukan' ? "text-emerald-600" : "text-rose-600"
                   )}>
                     {t.type === 'pemasukan' ? '+' : '-'} {new Intl.NumberFormat('id-ID').format(t.amount)}
                   </td>
@@ -978,21 +954,21 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
                       <button 
                         onClick={() => printTransaction(t.id)}
                         disabled={isPrinting}
-                        className="p-2 text-slate-300 dark:text-slate-600 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-all"
+                        className="p-2 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
                       >
                         <Printer className="w-4 h-4" />
                       </button>
                       {t.customer_id && (
                         <button 
                           onClick={() => handleDownloadInvoice(t.id)}
-                          className="p-2 text-slate-300 dark:text-slate-600 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-all"
+                          className="p-2 text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
                         >
                           <Download className="w-4 h-4" />
                         </button>
                       )}
                       <button 
                         onClick={() => handleDelete(t.id)}
-                        className="p-2 text-slate-300 dark:text-slate-600 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-all"
+                        className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -1354,19 +1330,22 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
         {/* Quick Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
            {/* Summary Tooltips */}
-           <div className="bg-indigo-600 p-6 rounded-[2.5rem] text-white shadow-xl shadow-indigo-200 border-b-4 border-indigo-800 flex flex-col justify-between">
-              <div>
-                <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-1">Kas di Tangan</p>
-                <p className="text-3xl font-black tracking-tighter leading-none">Rp {heldBalance.toLocaleString()}</p>
-              </div>
-              <button 
-                onClick={handleDeposit}
-                disabled={heldBalance === 0}
-                className="mt-6 w-full bg-white text-indigo-600 py-3 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                <Coins className="w-4 h-4" /> Setor ke Admin
-              </button>
-           </div>
+            <div className="bg-indigo-600 p-8 rounded-[3rem] text-white shadow-2xl shadow-indigo-200 border-b-8 border-indigo-800 flex flex-col justify-between min-h-[220px]">
+               <div>
+                 <p className="text-xs font-black text-indigo-200 uppercase tracking-widest mb-2 flex items-center gap-2">
+                   <Wallet className="w-4 h-4" /> Uang yang Anda Pegang
+                 </p>
+                 <p className="text-5xl font-black tracking-tighter leading-none mb-2">Rp {heldBalance.toLocaleString()}</p>
+                 <p className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider">Silakan setorkan ke Admin jika sudah banyak</p>
+               </div>
+               <button 
+                 onClick={handleDeposit}
+                 disabled={heldBalance === 0}
+                 className="mt-8 w-full bg-white text-indigo-600 py-5 rounded-[2rem] font-black text-sm uppercase tracking-[0.1em] active:scale-95 transition-all shadow-xl shadow-indigo-900/20 disabled:opacity-50 flex items-center justify-center gap-3"
+               >
+                 <Coins className="w-5 h-5" /> KONFIRMASI SETORAN
+               </button>
+            </div>
            
            <div className="grid grid-cols-2 gap-4">
              {/* Printer Card */}
@@ -1426,45 +1405,45 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
         </AnimatePresence>
 
 
-      <header className="mb-4">
-        <div className="flex items-center gap-2 mb-1">
-          <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-          <h2 className="text-2xl font-black tracking-tight text-slate-800 font-sans">Input Data Tagihan</h2>
+      <header className="mb-6">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-lg shadow-emerald-200 animate-pulse"></div>
+          <h2 className="text-3xl font-black tracking-tight text-slate-800 font-sans">Input Tagihan</h2>
         </div>
-        <p className="text-slate-500 text-sm">Pastikan nominal dan periode sudah sesuai dengan penagihan</p>
+        <p className="text-slate-500 text-sm font-medium">Layanan pencatatan pembayaran pelanggan</p>
       </header>
 
       {/* Input Form Card */}
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-indigo-600 rounded-3xl p-6 md:p-8 text-white shadow-2xl shadow-indigo-200 border-b-4 border-indigo-800"
+        className="bg-white rounded-[3rem] p-8 md:p-10 shadow-2xl shadow-slate-200 border border-slate-100"
       >
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <label className="block text-sm font-medium text-indigo-100">Pilih Pelanggan</label>
+        <form onSubmit={handleSubmit} className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center px-1">
+                <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.1em]">Cari Pelanggan</label>
                 <button 
                   type="button"
                   onClick={() => setShowQuickAdd(true)}
-                  className="text-[10px] font-bold bg-indigo-500/50 hover:bg-white hover:text-indigo-600 px-2 py-1 rounded transition-all flex items-center gap-1"
+                  className="text-[10px] font-black text-indigo-600 hover:text-indigo-700 flex items-center gap-1 uppercase tracking-widest"
                 >
-                  <Plus className="w-3 h-3" /> Tambah Baru
+                  <Plus className="w-3 h-3" /> Pelanggan Baru
                 </button>
               </div>
               <div className="relative">
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder="Cari nama atau alamat..."
+                    placeholder="Masukkan nama atau alamat..."
                     value={searchTerm}
                     onChange={(e) => {
                       setSearchTerm(e.target.value);
                       setShowCustomerList(true);
                     }}
                     onFocus={() => setShowCustomerList(true)}
-                    className="w-full bg-white text-slate-900 border-none px-4 py-3 rounded-xl focus:ring-4 focus:ring-indigo-400/30 transition-all font-medium pr-10"
+                    className="w-full bg-slate-50 text-slate-900 border-2 border-slate-100 px-6 py-5 rounded-[1.5rem] focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-bold text-lg pr-12 placeholder:text-slate-300"
                   />
                   {searchTerm && (
                     <button 
@@ -1531,120 +1510,93 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
                 )}
               </div>
             </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-indigo-100 mb-2">Bulan Tagihan (Klik untuk Pilih Multiple)</label>
-              {selectedCustomerId && (
-                <div className="mb-3 flex items-center gap-2">
-                  <span className="text-[10px] font-bold bg-indigo-500/50 text-indigo-50 px-2 py-1 rounded-full flex items-center gap-1">
-                    <History className="w-3 h-3" /> 
-                    Tracking sejak: {formatPeriod(customers.find(c => String(c.id) === selectedCustomerId)?.created_at?.slice(0, 7) || '') || '-'}
-                  </span>
-                </div>
-              )}
+            <div className="space-y-4">
+              <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.1em] px-1">Pilih Keterangan Setoran</label>
+              <div className="grid grid-cols-2 gap-3">
+                {['Tagihan Bulanan', 'Pemasangan Baru', 'Denda', 'Voucher', 'Lain-lain'].map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setSelectedCategory(cat)}
+                    className={cn(
+                      "py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border-2",
+                      selectedCategory === cat 
+                        ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200 scale-[1.02]" 
+                        : "bg-slate-50 border-slate-100 text-slate-400 hover:border-slate-200"
+                    )}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {selectedCategory === 'Tagihan Bulanan' && unpaidMonthsList.length > 0 ? (
+            <motion.div 
+               initial={{ opacity: 0, height: 0 }}
+               animate={{ opacity: 1, height: 'auto' }}
+               className="space-y-4"
+            >
+              <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.1em] px-1">Pilih Bulan yang Dibayar (Bisa pilih banyak)</label>
               <div className="flex flex-wrap gap-2">
-                {unpaidMonthsList.length > 0 ? (
-                  unpaidMonthsList.map(m => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => togglePeriod(m)}
-                      className={cn(
-                        "px-3 py-2 rounded-xl text-[10px] font-black transition-all border-2 uppercase tracking-tight",
-                        selectedPeriods.includes(m) 
-                          ? "bg-amber-400 text-slate-900 border-amber-400 shadow-lg scale-105" 
-                          : "bg-indigo-500 text-indigo-100 border-indigo-400 hover:bg-white hover:text-indigo-600"
-                      )}
-                    >
-                      {formatPeriod(m)}
-                      {m > new Date().toISOString().slice(0, 7) && <span className="ml-1 opacity-50">(Depan)</span>}
-                      {selectedPeriods.includes(m) && <Check className="w-3 h-3 ml-1 inline" />}
-                    </button>
-                  ))
-                ) : selectedCustomerId && selectedCategory === 'Tagihan Bulanan' ? (
-                  <div className="bg-emerald-500/20 text-emerald-100 border border-emerald-400/30 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4" /> Lunas / Tidak ada tunggakan
-                  </div>
-                ) : (
-                  <input name="billing_period" type="month" defaultValue={new Date().toISOString().slice(0, 7)} className="w-full bg-white text-slate-900 border-none px-4 py-3 rounded-xl focus:ring-4 focus:ring-indigo-400/30 transition-all font-medium" />
-                )}
+                {unpaidMonthsList.map(m => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => togglePeriod(m)}
+                    className={cn(
+                      "px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border-2",
+                      selectedPeriods.includes(m) 
+                        ? "bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-100 scale-110 z-10" 
+                        : "bg-slate-50 border-slate-100 text-slate-400 hover:border-slate-200"
+                    )}
+                  >
+                    {formatPeriod(m)}
+                    {m > new Date().toISOString().slice(0, 7) && <span className="ml-1 opacity-50 text-[8px]">(DEPAN)</span>}
+                  </button>
+                ))}
               </div>
-              {unpaidMonthsList.length > 1 && !selectedPeriods.includes(unpaidMonthsList[0]) && (
-                <p className="text-[10px] text-indigo-200 mt-2 italic">Pelanggan memiliki tunggakan dari bulan {unpaidMonthsList[0]}</p>
-              )}
+            </motion.div>
+          ) : selectedCategory === 'Tagihan Bulanan' && selectedCustomerId ? (
+            <div className="bg-emerald-50 border-2 border-emerald-100 p-6 rounded-3xl flex items-center justify-center gap-3">
+              <CheckCircle className="w-5 h-5 text-emerald-600" />
+              <span className="text-xs font-black text-emerald-800 uppercase tracking-widest">Semua Tagihan Sudah Lunas</span>
             </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-indigo-100 mb-2">Kategori Setoran</label>
-              <select 
-                name="category" 
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full bg-white text-slate-900 border-none px-4 py-3 rounded-xl focus:ring-4 focus:ring-indigo-400/30 transition-all font-medium"
-              >
-                <option value="Tagihan Bulanan">Tagihan Bulanan</option>
-                <option value="Pemasangan Baru">Pemasangan Baru</option>
-                <option value="Lain-lain">Lain-lain</option>
-              </select>
-            </div>
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <label className="block text-sm font-medium text-indigo-100">
-                  Jumlah {selectedPeriods.length > 1 ? `x ${selectedPeriods.length} Bulan` : ''} (Rp)
-                </label>
-                {selectedCategory === 'Tagihan Bulanan' && amount && (
-                  <span className="text-[10px] font-bold bg-green-500/30 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
-                    <Lock className="w-2.5 h-2.5" /> Terkunci Harga Paket
-                  </span>
-                )}
-              </div>
-              <div className="relative">
-                <FormattedNumberInput 
-                  name="amount" 
-                  required 
-                  value={amount}
-                  onChange={(val) => setAmount(val)}
-                  placeholder="Contoh: 150.000"
-                  className={cn(
-                    "w-full text-slate-900 border-none px-4 py-3 rounded-xl focus:ring-4 transition-all font-bold text-lg",
-                    selectedCategory === 'Tagihan Bulanan' 
-                      ? "bg-indigo-50/50 cursor-not-allowed focus:ring-transparent" 
-                      : "bg-white focus:ring-indigo-400/30"
-                  )}
-                />
-                {selectedPeriods.length > 1 && (
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 bg-indigo-50 text-indigo-600 px-3 py-1 rounded-lg text-xs font-black">
-                    Total: Rp {totalAmount.toLocaleString()}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 gap-6">
-            <div className="bg-indigo-600/30 border border-indigo-400/30 rounded-2xl p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-indigo-500/50 flex items-center justify-center text-white font-black">
-                  {user.name.charAt(0).toUpperCase()}
+          ) : null}
+
+          <div className="space-y-4">
+             <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.1em] px-1">Konfirmasi Nominal</label>
+             <div className="bg-slate-900 border-b-8 border-slate-950 p-10 rounded-[2.5rem] text-center shadow-2xl overflow-hidden relative group">
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <Coins className="w-20 h-20 text-white" />
                 </div>
-                <div>
-                  <p className="text-[10px] text-indigo-200 font-bold uppercase tracking-widest">Petugas Penerima (Penagih)</p>
-                  <p className="font-black text-white">{user.name}</p>
-                </div>
-              </div>
-              <div className="bg-emerald-500 text-white text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-tighter shadow-lg">
-                Verified Account
-              </div>
-            </div>
-            {/* We hide the technical description input but keep it for metadata if needed, 
-                or just replace it entirely as requested */}
-            <input name="description" type="hidden" value={`Setoran via ${user.name}`} />
+                <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-2">Total Terima Uang</p>
+                <p className={cn(
+                  "text-5xl font-black tracking-tighter leading-none mb-4 transition-all",
+                  totalAmount > 0 ? "text-emerald-400" : "text-white/20"
+                )}>
+                  Rp {totalAmount.toLocaleString()}
+                </p>
+                {selectedCategory === 'Tagihan Bulanan' && selectedPeriods.length > 0 && (
+                   <div className="bg-white/5 py-2 px-4 rounded-full inline-flex items-center gap-2">
+                     <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Pembayaran untuk</span>
+                     <span className="text-[9px] font-black text-emerald-400 uppercase">{selectedPeriods.length} BULAN</span>
+                   </div>
+                )}
+             </div>
           </div>
+
           <button 
             type="submit" 
-            disabled={loading}
-            className="w-full bg-white text-indigo-600 font-bold py-4 rounded-2xl hover:bg-slate-100 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg"
+            disabled={loading || !selectedCustomerId || (selectedCategory === 'Tagihan Bulanan' && selectedPeriods.length === 0)}
+            className="w-full bg-indigo-600 hover:bg-black text-white py-8 rounded-[3rem] font-black text-xl uppercase tracking-[0.2em] shadow-2xl shadow-indigo-300 transition-all active:scale-95 disabled:opacity-30 flex flex-col items-center justify-center gap-1 group"
           >
-            {loading ? 'Sabar Menabung...' : <><Plus className="w-6 h-6" /> Simpan Transaksi</>}
+            <div className="flex items-center gap-3">
+               {loading ? <RefreshCw className="w-6 h-6 animate-spin" /> : <CheckCircle className="w-6 h-6 group-hover:scale-110 transition-transform" />}
+               <span>SIMPAN SEKARANG</span>
+            </div>
+            <span className="text-[9px] text-white/50 font-bold uppercase tracking-widest group-disabled:hidden">Struk akan otomatis dibuat</span>
           </button>
         </form>
       </motion.div>
@@ -2641,7 +2593,7 @@ function PacketManagement({ user, refreshTrigger }: { user: User, refreshTrigger
   );
 }
 
-function SettingsManagement({ user, deferredPrompt, onInstall, refreshTrigger, theme, setTheme }: { user: User, deferredPrompt?: any, onInstall?: () => void, refreshTrigger?: number, theme: 'light' | 'dark' | 'auto', setTheme: (t: 'light' | 'dark' | 'auto') => void }) {
+function SettingsManagement({ user, deferredPrompt, onInstall, refreshTrigger }: { user: User, deferredPrompt?: any, onInstall?: () => void, refreshTrigger?: number }) {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -2710,36 +2662,7 @@ function SettingsManagement({ user, deferredPrompt, onInstall, refreshTrigger, t
         </div>
       </header>
 
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-800">
-        <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-xs flex items-center gap-2 mb-4">
-          <SunMoon className="w-4 h-4 text-indigo-500" /> Mode Tampilan
-        </h3>
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { id: 'light', label: 'Terang', icon: <PlusCircle className="w-4 h-4" /> },
-            { id: 'dark', label: 'Gelap', icon: <MinusCircle className="w-4 h-4" /> },
-            { id: 'auto', label: 'Auto (Waktu)', icon: <RefreshCw className="w-4 h-4" /> },
-          ].map((mode) => (
-            <button
-              key={mode.id}
-              onClick={() => setTheme(mode.id as any)}
-              className={cn(
-                "flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-xs transition-all border",
-                theme === mode.id 
-                  ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-none" 
-                  : "bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
-              )}
-            >
-              {mode.id === 'light' && <PlusCircle className="w-4 h-4" />}
-              {mode.id === 'dark' && <MinusCircle className="w-4 h-4" />}
-              {mode.id === 'auto' && <RefreshCw className="w-4 h-4" />}
-              <span>{mode.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-800 overflow-hidden">
+      <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
         <div className="p-8 space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-4">
@@ -2777,34 +2700,7 @@ function SettingsManagement({ user, deferredPrompt, onInstall, refreshTrigger, t
             </div>
 
             <div className="space-y-4">
-              <h3 className="font-black text-slate-800 uppercase tracking-widest text-xs flex items-center gap-2">
-                <SunMoon className="w-4 h-4 text-indigo-500" /> Tampilan Aplikasi
-              </h3>
-              <div className="grid grid-cols-3 gap-2">
-                {(['light', 'dark', 'auto'] as const).map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setTheme(t)}
-                    className={cn(
-                      "py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border-2",
-                      theme === t 
-                        ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200" 
-                        : "bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-400 dark:text-slate-500 hover:border-slate-200"
-                    )}
-                  >
-                    <div className="flex flex-col items-center gap-1.5">
-                      {t === 'light' && <Sun className="w-4 h-4" />}
-                      {t === 'dark' && <Moon className="w-4 h-4" />}
-                      {t === 'auto' && <SunMoon className="w-4 h-4" />}
-                      {t === 'auto' ? 'Otomatis' : t === 'light' ? 'Terang' : 'Gelap'}
-                    </div>
-                  </button>
-                ))}
-              </div>
-              <p className="text-[10px] text-slate-400 font-medium italic mt-1 ml-1 leading-relaxed">
-                * Otomatis: Mengikuti pengaturan sistem atau jadwal malam (18:00 - 06:00)
-              </p>
+               {/* Spacer for layout */}
             </div>
           </div>
 
