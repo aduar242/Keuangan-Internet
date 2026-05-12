@@ -1759,11 +1759,12 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
 
       <AnimatePresence>
         {showQuickAdd && (
-          <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-slate-900/80 z-[100] flex items-center justify-center p-4">
             <motion.div 
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ duration: 0.2 }}
               className="relative bg-slate-50 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden"
             >
               <div className="bg-white p-6 border-b border-slate-100 flex items-center justify-between">
@@ -1971,12 +1972,14 @@ function ReceiptPreviewModal({ transaction, userName, settings, onClose }: { tra
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="absolute inset-0 bg-slate-900/80 backdrop-blur-md" 
+        transition={{ duration: 0.2 }}
+        className="absolute inset-0 bg-slate-900/90" 
       />
       <motion.div 
-        initial={{ scale: 0.9, opacity: 0, y: 20 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 10 }}
+        transition={{ duration: 0.2 }}
         className="relative bg-slate-100 w-full max-w-sm rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
       >
         <div className="p-6 bg-white flex items-center justify-between border-b border-slate-100">
@@ -2270,12 +2273,14 @@ function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigg
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => { setShowForm(false); setEditingCustomer(null); }}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" 
+              transition={{ duration: 0.2 }}
+              className="absolute inset-0 bg-slate-900/80" 
             />
             <motion.div 
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ duration: 0.2 }}
               className="relative bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden"
             >
               <div className="p-8 bg-white border-b border-slate-100 flex items-center justify-between">
@@ -3139,12 +3144,14 @@ function TransactionModal({ user, isAdmin, onClose, onSuccess }: { user: User, i
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" 
+        transition={{ duration: 0.2 }}
+        className="absolute inset-0 bg-slate-900/90" 
       />
       <motion.div 
-        initial={{ scale: 0.9, opacity: 0, y: 20 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 10 }}
+        transition={{ duration: 0.2 }}
         className="relative bg-slate-50 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden"
       >
         <div className="bg-white p-6 border-b border-slate-100 flex items-center justify-between">
