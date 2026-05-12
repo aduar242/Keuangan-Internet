@@ -38,6 +38,7 @@ import {
   PlusCircle,
   MinusCircle,
   UserCheck,
+  UserX,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Transaction, DashboardStats, Customer, Packet, AppSettings } from './types';
@@ -355,10 +356,14 @@ export default function App() {
               <div className="flex items-center gap-1.5 mt-1">
                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{user.role}</span>
                 <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                <div className="flex items-center gap-1">
+                <button 
+                  onClick={checkPrinter}
+                  disabled={printerStatus === 'checking'}
+                  className="flex items-center gap-1 active:scale-95 transition-transform"
+                >
                   <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse", printerStatus === 'ready' ? "bg-emerald-500" : "bg-rose-500")}></div>
-                  <span className="text-[9px] font-bold text-slate-400">PRINTER {printerStatus === 'ready' ? 'SIAP' : 'OFF'}</span>
-                </div>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase">PRINTER {printerStatus === 'ready' ? 'SIAP' : (printerStatus === 'checking' ? '...' : 'OFF')}</span>
+                </button>
               </div>
             </div>
           </div>
@@ -1239,38 +1244,38 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
     
     try {
       const periodsToPay = selectedCategory === 'Tagihan Bulanan' ? selectedPeriods : [new Date().toISOString().slice(0, 7)];
-      let lastTransactionId = null;
+      
+      // To unify the report, we send ONE transaction with comma-separated periods
+      const data = {
+        type: 'pemasukan',
+        category: selectedCategory,
+        amount: totalAmount, // Use the total amount for all periods
+        description: selectedCategory === 'Tagihan Bulanan' 
+          ? `Internet ${periodsToPay.map(p => formatPeriod(p).split(' ')[0]).join(', ')}` 
+          : (e.currentTarget.description as any).value,
+        billing_period: selectedCategory === 'Tagihan Bulanan' ? periodsToPay.join(',') : null,
+        transaction_date: new Date().toISOString().split('T')[0],
+        customer_id: selectedCustomerId ? Number(selectedCustomerId) : null
+      };
 
-      for (const period of periodsToPay) {
-        const data = {
-          type: 'pemasukan',
-          category: selectedCategory,
-          amount: Number(amount),
-          description: selectedCategory === 'Tagihan Bulanan' ? `Internet ${formatPeriod(period)}` : (e.currentTarget.description as any).value,
-          billing_period: selectedCategory === 'Tagihan Bulanan' ? period : null,
-          transaction_date: new Date().toISOString().split('T')[0],
-          customer_id: selectedCustomerId ? Number(selectedCustomerId) : null
-        };
-
-        const res = await fetch('/api/transactions', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'x-user-id': String(user.id)
-          },
-          body: JSON.stringify(data)
-        });
-        
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.error || 'Gagal menyimpan transaksi.');
-        }
-
-        const result = await res.json();
-        lastTransactionId = result.id;
+      const res = await fetch('/api/transactions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': String(user.id)
+        },
+        body: JSON.stringify(data)
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Gagal menyimpan transaksi.');
       }
 
-      // If we made it here, all payments succeeded
+      const result = await res.json();
+      const lastTransactionId = result.id;
+
+      // If we made it here, payment succeeded
       alert('Pembayaran Berhasil Dicatat!');
       
       // Auto-Print Receipt if requested
@@ -1449,8 +1454,12 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
                 </div>
                 <input type="hidden" name="customer_id" value={selectedCustomerId} />
                 
-                {showCustomerList && searchTerm && (
-                  <div className="absolute z-[110] left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 max-h-60 overflow-y-auto overflow-x-hidden">
+                {showCustomerList && (
+                  <div className="absolute z-[110] left-0 right-0 mt-2 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-indigo-100 max-h-72 overflow-y-auto overflow-x-hidden p-2 animate-in fade-in zoom-in-95 duration-200">
+                    <div className="px-3 py-2 border-b border-slate-50 mb-1 flex justify-between items-center">
+                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Pilih Pelanggan ({filteredCustomers.length})</p>
+                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    </div>
                     {filteredCustomers.length > 0 ? (
                       filteredCustomers.map(c => (
                         <button
@@ -1461,25 +1470,26 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
                             setSearchTerm(c.name);
                             setShowCustomerList(false);
                           }}
-                          className="w-full text-left px-5 py-3 hover:bg-slate-50 transition-colors border-b last:border-0 border-slate-50"
+                          className="w-full text-left px-5 py-4 hover:bg-indigo-50/50 rounded-xl transition-all border-b last:border-0 border-slate-50 active:scale-[0.98] group"
                         >
-                          <div className="font-bold text-slate-900 flex items-center justify-between">
-                            <span>{c.name}</span>
+                          <div className="font-bold text-slate-900 flex items-center justify-between mb-0.5">
+                            <span className="group-hover:text-indigo-600 transition-colors">{c.name}</span>
                             {getUnpaidMonthsList(c).length === 0 ? (
-                              <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">LUNAS</span>
+                              <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">LUNAS</span>
                             ) : (
-                              <span className="text-[9px] font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full">{getUnpaidMonthsList(c).length} BLN</span>
+                              <span className="text-[9px] font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100">{getUnpaidMonthsList(c).length} BLN</span>
                             )}
                           </div>
-                          <div className="text-[10px] text-slate-500 uppercase flex justify-between">
-                            <span>{c.packet}</span>
-                            <span className="italic">{c.address}</span>
+                          <div className="text-[10px] text-slate-500 uppercase flex justify-between items-center opacity-70">
+                            <span className="truncate max-w-[150px] italic">{c.address}</span>
+                            <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-[8px]">ID: {c.id}</span>
                           </div>
                         </button>
                       ))
                     ) : (
-                      <div className="px-5 py-4 text-center text-slate-400 italic text-sm">
-                        Pelanggan tidak ditemukan.
+                      <div className="px-5 py-8 text-center">
+                        <UserX className="w-10 h-10 mx-auto text-slate-200 mb-2" />
+                        <p className="text-slate-400 italic text-xs font-bold uppercase tracking-tight">Pelanggan tidak ditemukan</p>
                       </div>
                     )}
                   </div>
@@ -2166,6 +2176,7 @@ function Receipt({ transaction, userName, settings }: { transaction: Transaction
 function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigger?: number }) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [packets, setPackets] = useState<Packet[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [isOldCustomer, setIsOldCustomer] = useState(false);
@@ -2173,12 +2184,14 @@ function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigg
 
   const fetchData = async () => {
     try {
-      const [custRes, packRes] = await Promise.all([
+      const [custRes, packRes, userRes] = await Promise.all([
         fetch('/api/customers', { headers: { 'x-user-id': String(user.id) } }),
-        fetch('/api/packets', { headers: { 'x-user-id': String(user.id) } })
+        fetch('/api/packets', { headers: { 'x-user-id': String(user.id) } }),
+        fetch('/api/users', { headers: { 'x-user-id': String(user.id) } })
       ]);
       if (custRes.ok) setCustomers(await custRes.json());
       if (packRes.ok) setPackets(await packRes.json());
+      if (userRes.ok) setUsers(await userRes.json());
     } catch (err) {
       console.error('Failed to fetch customer management data:', err);
     }
@@ -2326,6 +2339,15 @@ function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigg
                        <input name="phone" defaultValue={editingCustomer?.phone} placeholder="62812..." className="w-full bg-slate-50 border-none h-14 px-6 rounded-2xl font-bold text-slate-700 outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all" />
                     </div>
                     <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Petugas Penagih</label>
+                       <select name="collector_id" defaultValue={editingCustomer?.collector_id} className="w-full bg-slate-50 border-none h-14 px-6 rounded-2xl font-bold text-slate-700 outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all appearance-none">
+                          <option value="">-- PILIH PENAGIH --</option>
+                          {users.filter(u => u.role === 'penagih').map(u => (
+                            <option key={u.id} value={u.id}>{u.name}</option>
+                          ))}
+                       </select>
+                    </div>
+                    <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Paket Layanan</label>
                       <select name="packet" defaultValue={editingCustomer?.packet} className="w-full bg-slate-50 border-none h-14 px-6 rounded-2xl font-bold text-slate-700 outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all appearance-none" required>
                         <option value="">-- PILIH PAKET --</option>
@@ -2406,10 +2428,16 @@ function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigg
                 </div>
              </div>
 
-             <div className="bg-slate-50/50 p-4 rounded-3xl border border-dashed border-slate-200">
+             <div className="bg-slate-50/50 p-4 rounded-3xl border border-dashed border-slate-200 space-y-3">
+                <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest leading-none">
+                   <span className="text-slate-400">Petugas Penagih</span>
+                   <span className="text-indigo-500 font-bold bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100 flex items-center gap-1">
+                      <UserCheck className="w-2.5 h-2.5" /> {(c as any).collector_name || 'BELUM DISET'}
+                   </span>
+                </div>
                 <div className="flex justify-between items-center">
                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Mulai Berlangganan</span>
-                   <span className="text-[10px] font-bold text-indigo-500 flex items-center gap-1">
+                   <span className="text-[10px] font-bold text-slate-700 flex items-center gap-1">
                       <Calendar className="w-3" /> {c.created_at?.slice(0, 7) || 'Manual'}
                    </span>
                 </div>
@@ -2432,6 +2460,7 @@ function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigg
 function PacketManagement({ user, refreshTrigger }: { user: User, refreshTrigger?: number }) {
   const [packets, setPackets] = useState<Packet[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [editingPacket, setEditingPacket] = useState<Packet | null>(null);
   const [price, setPrice] = useState('');
 
   const fetchPackets = async () => {
@@ -2445,12 +2474,15 @@ function PacketManagement({ user, refreshTrigger }: { user: User, refreshTrigger
 
   useEffect(() => { fetchPackets(); }, [refreshTrigger]);
 
-  const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
       const formData = new FormData(e.currentTarget);
-      const res = await fetch('/api/packets', {
-        method: 'POST',
+      const url = editingPacket ? `/api/packets/${editingPacket.id}` : '/api/packets';
+      const method = editingPacket ? 'PUT' : 'POST';
+      
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json', 'x-user-id': String(user.id) },
         body: JSON.stringify({
           name: formData.get('name'),
@@ -2459,6 +2491,7 @@ function PacketManagement({ user, refreshTrigger }: { user: User, refreshTrigger
       });
       if (res.ok) {
         setShowForm(false);
+        setEditingPacket(null);
         setPrice('');
         fetchPackets();
       } else {
@@ -2487,6 +2520,12 @@ function PacketManagement({ user, refreshTrigger }: { user: User, refreshTrigger
     }
   };
 
+  const handleEdit = (packet: Packet) => {
+    setEditingPacket(packet);
+    setPrice(String(packet.price));
+    setShowForm(true);
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 text-slate-800">
       <div className="bg-white p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 flex justify-between items-center">
@@ -2495,7 +2534,13 @@ function PacketManagement({ user, refreshTrigger }: { user: User, refreshTrigger
           <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Total: {packets.length} Pilihan Paket</p>
         </div>
         <button 
-          onClick={() => setShowForm(!showForm)} 
+          onClick={() => {
+            if (showForm) {
+              setEditingPacket(null);
+              setPrice('');
+            }
+            setShowForm(!showForm);
+          }} 
           className={cn(
             "w-14 h-14 rounded-2xl transition-all active:scale-95 shadow-lg flex items-center justify-center",
             showForm ? "bg-rose-500 text-white shadow-rose-200" : "bg-indigo-600 text-white shadow-indigo-200"
@@ -2508,11 +2553,13 @@ function PacketManagement({ user, refreshTrigger }: { user: User, refreshTrigger
       <AnimatePresence>
         {showForm && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-2xl shadow-indigo-500/10">
-            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 px-1 italic">Buat Penawaran Paket Baru</h3>
-            <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 px-1 italic">
+              {editingPacket ? 'Perbarui Rincian Paket' : 'Buat Penawaran Paket Baru'}
+            </h3>
+            <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nama Layanan</label>
-                 <input name="name" placeholder="mis: 10Mbps Gold" className="w-full bg-slate-50 border-none h-14 px-6 rounded-2xl font-bold text-slate-700 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all" required />
+                 <input name="name" defaultValue={editingPacket?.name} placeholder="mis: 10Mbps Gold" className="w-full bg-slate-50 border-none h-14 px-6 rounded-2xl font-bold text-slate-700 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all" required />
               </div>
               <div className="space-y-2">
                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Harga Bulanan</label>
@@ -2525,7 +2572,9 @@ function PacketManagement({ user, refreshTrigger }: { user: User, refreshTrigger
                     required 
                  />
               </div>
-              <button type="submit" className="md:col-span-2 w-full bg-indigo-600 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-200 active:scale-[0.98] transition-all">Simpan Katalog</button>
+              <button type="submit" className="md:col-span-2 w-full bg-indigo-600 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-200 active:scale-[0.98] transition-all">
+                {editingPacket ? 'Simpan Perubahan' : 'Simpan Katalog'}
+              </button>
             </form>
           </motion.div>
         )}
@@ -2551,15 +2600,23 @@ function PacketManagement({ user, refreshTrigger }: { user: User, refreshTrigger
                  </div>
                  
                  <div className="mt-8 flex justify-between items-center border-t border-slate-50 pt-6">
+                    <div className="flex gap-2">
+                       <button 
+                        onClick={() => handleEdit(p)}
+                        className="p-3 bg-indigo-50 text-indigo-400 hover:text-indigo-600 rounded-xl transition-all active:scale-90"
+                       >
+                          <Settings className="w-5 h-5" />
+                       </button>
+                       <button 
+                        onClick={() => handleDelete(p.id)}
+                        className="p-3 bg-rose-50 text-rose-300 hover:text-rose-600 rounded-xl transition-all active:scale-90"
+                       >
+                          <Trash2 className="w-5 h-5" />
+                       </button>
+                    </div>
                     <div className="flex -space-x-2">
                        {[1,2,3].map(i => <div key={i} className="w-6 h-6 rounded-full bg-slate-100 border-2 border-white"></div>)}
                     </div>
-                    <button 
-                      onClick={() => handleDelete(p.id)}
-                      className="p-3 bg-rose-50 text-rose-300 hover:text-rose-600 rounded-xl transition-all active:scale-90"
-                    >
-                       <Trash2 className="w-5 h-5" />
-                    </button>
                  </div>
               </div>
            </motion.div>
@@ -3164,16 +3221,25 @@ function TransactionModal({ user, isAdmin, onClose, onSuccess }: { user: User, i
 function PaymentReport({ user, refreshTrigger }: { user: User, refreshTrigger?: number }) {
   const [data, setData] = useState<any[]>([]);
   const [months, setMonths] = useState<string[]>([]);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+  useEffect(() => {
+    // Generate last 12 months for the selected year
+    const last12Months = [];
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(selectedYear, i, 1);
+      last12Months.push(d.toISOString().slice(0, 7));
+    }
+    // Order from left to right (chronological) is already done by i = 0 to 11
+    setMonths(last12Months);
+  }, [selectedYear]);
 
   useEffect(() => {
     const fetchReport = async () => {
       try {
         const res = await fetch('/api/reports/payments', { headers: { 'x-user-id': String(user.id) } });
         if (res.ok) {
-          const result = await res.json();
-          setData(result);
-          const uniqueMonths = Array.from(new Set(result.map((r: any) => r.billing_period))).sort().reverse();
-          setMonths(uniqueMonths as string[]);
+          setData(await res.json());
         }
       } catch (err) {
         console.error('Failed to fetch payment report:', err);
@@ -3186,64 +3252,149 @@ function PaymentReport({ user, refreshTrigger }: { user: User, refreshTrigger?: 
 
   return (
     <div className="space-y-6">
-      <header>
-        <h2 className="text-2xl font-bold tracking-tight">Laporan Pembayaran Bulanan</h2>
-        <p className="text-slate-500">Monitor status tagihan pelanggan per bulan</p>
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Laporan Pembayaran Bulanan</h2>
+          <p className="text-slate-500">Monitor status tagihan pelanggan per bulan</p>
+        </div>
+        <div className="flex items-center gap-2 bg-white p-2 rounded-2xl border border-slate-200">
+          <button 
+            onClick={() => setSelectedYear(selectedYear - 1)}
+            className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <span className="font-black text-slate-800 px-4">{selectedYear}</span>
+          <button 
+            onClick={() => setSelectedYear(selectedYear + 1)}
+            className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
+          >
+            <ArrowRightCircle className="w-4 h-4" />
+          </button>
+        </div>
       </header>
 
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-x-auto">
-        <table className="w-full text-left font-sans">
-          <thead className="bg-slate-50 text-slate-400 text-[10px] uppercase font-bold">
-            <tr>
-              <th className="px-6 py-4 sticky left-0 bg-slate-50 z-10 w-48">Pelanggan</th>
-              {months.map(m => (
-                <th key={m} className="px-4 py-4 text-center">{m}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {customers.map(c => (
-              <tr key={c} className="hover:bg-slate-50 transition-colors">
-                <td className="px-6 py-4 font-bold text-slate-900 sticky left-0 bg-white z-10 shadow-[2px_0_5px_rgba(0,0,0,0.02)]">
-                  {c}
-                </td>
-                {months.map(m => {
-                  const payment = data.find(d => d.customer_name === c && d.billing_period === m);
-                  const isCurrentOrPast = m <= new Date().toISOString().slice(0, 7);
-                  return (
-                    <td key={m} className="px-4 py-4 text-center">
-                      {payment ? (
-                        <div className="flex flex-col items-center">
-                          <div className={cn(
-                            "w-6 h-6 rounded-full flex items-center justify-center mx-auto shadow-sm",
-                            payment.status === 'confirmed' ? "bg-emerald-500 text-white" : "bg-amber-400 text-white"
-                          )}>
-                            <CalendarCheck2 className="w-3.5 h-3.5" />
-                          </div>
-                          <span className="text-[8px] text-slate-400 mt-1 font-bold">Rp {payment.amount?.toLocaleString()}</span>
-                        </div>
-                      ) : (
-                        <div className={cn(
-                          "w-6 h-6 rounded-full mx-auto flex items-center justify-center",
-                          isCurrentOrPast ? "bg-rose-50 border-2 border-rose-200 text-rose-500" : "border-2 border-slate-100 text-slate-200"
-                        )}>
-                           {isCurrentOrPast && <span className="text-[8px] font-black italic">BELUM</span>}
-                        </div>
-                      )}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-            {customers.length === 0 && (
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left font-sans min-w-[1000px]">
+            <thead className="bg-slate-50 text-slate-400 text-[10px] uppercase font-bold border-b border-slate-100">
               <tr>
-                <td colSpan={months.length + 1} className="py-20 text-center text-slate-400 italic">
-                  Belum ada data pembayaran bulanan yang tercatat.
-                </td>
+                <th className="px-6 py-5 sticky left-0 bg-slate-50 z-20 w-64 border-r border-slate-100">Pelanggan / Alamat</th>
+                {months.map(m => (
+                  <th key={m} className="px-4 py-5 text-center min-w-[80px]">{formatPeriod(m).split(' ')[0]}</th>
+                ))}
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {customers.map(c => {
+                const customerData = data.filter(d => d.customer_name === c);
+                const address = customerData[0]?.customer_address || '';
+                
+                return (
+                  <tr key={c} className="hover:bg-slate-50/50 transition-colors group">
+                    <td className="px-6 py-4 sticky left-0 bg-white group-hover:bg-slate-50 z-10 border-r border-slate-100 shadow-[2px_0_10px_rgba(0,0,0,0.03)]">
+                      <div className="flex flex-col">
+                        <span className="font-black text-slate-900 text-sm">{c}</span>
+                        <span className="text-[10px] text-slate-400 font-medium truncate max-w-[200px]">{address}</span>
+                      </div>
+                    </td>
+                    {months.map(m => {
+                      const payment = data.find(d => d.customer_name === c && d.billing_period === m);
+                      const customerInfo = data.find(d => d.customer_name === c);
+                      const registrationMonth = customerInfo?.customer_created_at?.slice(0, 7) || '2000-01';
+                      const isAfterRegistration = m >= registrationMonth;
+                      const isPastOrCurrent = m <= new Date().toISOString().slice(0, 7);
+                      const shouldBePaid = isAfterRegistration && isPastOrCurrent;
+                      
+                      return (
+                        <td key={m} className="px-2 py-4 text-center">
+                          {payment ? (
+                            <motion.div 
+                              initial={{ scale: 0.8, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              className="group/item relative"
+                            >
+                              <div className={cn(
+                                "w-8 h-8 rounded-xl flex items-center justify-center mx-auto shadow-sm transition-transform group-hover/item:scale-110",
+                                payment.status === 'confirmed' ? "bg-emerald-500 text-white" : "bg-amber-400 text-white"
+                              )}>
+                                <CheckCircle className="w-4 h-4" />
+                              </div>
+                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover/item:opacity-100 transition-opacity bg-slate-900 text-white text-[9px] py-2 px-3 rounded-xl whitespace-nowrap z-50 pointer-events-none shadow-2xl flex flex-col gap-1 items-center border border-white/10">
+                                <span className="font-black text-indigo-400 border-b border-indigo-500/30 pb-0.5 mb-0.5">{payment.status === 'confirmed' ? 'LUNAS' : 'PENDING'}</span>
+                                <span className="font-bold">Rp {payment.amount?.toLocaleString()}</span>
+                                <span className="text-[8px] opacity-70">Bayar: {payment.transaction_date}</span>
+                                <span className="text-[8px] opacity-80 flex items-center gap-1 font-black">
+                                  <UserCheck className="w-2.5 h-2.5" /> {payment.collector_name || 'Admin'}
+                                </span>
+                              </div>
+                            </motion.div>
+                          ) : (
+                            <div className={cn(
+                              "w-8 h-8 rounded-xl mx-auto flex items-center justify-center transition-all",
+                              shouldBePaid ? "bg-rose-50 border border-rose-200 text-rose-500 shadow-inner group/unpaid relative" : "bg-slate-50 border border-slate-100 text-slate-200"
+                            )}>
+                               {shouldBePaid ? (
+                                 <>
+                                   <X className="w-3.5 h-3.5" />
+                                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover/unpaid:opacity-100 transition-opacity bg-rose-600 text-white text-[8px] py-1 px-2 rounded-lg whitespace-nowrap z-50 pointer-events-none font-bold">
+                                      MENUNGGAK
+                                   </div>
+                                 </>
+                               ) : (
+                                 <div className="w-1 h-1 rounded-full bg-slate-200" />
+                               )}
+                            </div>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+              {customers.length === 0 && (
+                <tr>
+                  <td colSpan={months.length + 1} className="py-32 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                       <FileText className="w-12 h-12 text-slate-100" />
+                       <p className="text-slate-400 text-sm font-medium italic">Belum ada data pelanggan tercatat.</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      <div className="flex flex-wrap gap-6 items-center bg-slate-50 p-6 rounded-3xl border border-slate-100">
+         <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+               <CheckCircle className="w-5 h-5" />
+            </div>
+            <div>
+               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lunas</p>
+               <p className="text-xs font-bold text-slate-700">Telah diverifikasi</p>
+            </div>
+         </div>
+         <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-amber-400 rounded-xl flex items-center justify-center text-white shadow-lg shadow-amber-500/20">
+               <CheckCircle className="w-5 h-5" />
+            </div>
+            <div>
+               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pending</p>
+               <p className="text-xs font-bold text-slate-700">Belum disetor/konfirmasi</p>
+            </div>
+         </div>
+         <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-center text-rose-500">
+               <X className="w-5 h-5" />
+            </div>
+            <div>
+               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Menunggak</p>
+               <p className="text-xs font-bold text-slate-700">Lewat jatuh tempo</p>
+            </div>
+         </div>
       </div>
     </div>
   );

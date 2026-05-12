@@ -376,6 +376,17 @@ async function startServer() {
     }
   });
 
+  app.put('/api/packets/:id', authMiddleware, adminOnly, (req, res) => {
+    try {
+      const { name, price } = req.body;
+      db.prepare('UPDATE packets SET name = ?, price = ? WHERE id = ?').run(name, price, req.params.id);
+      broadcast('packet:updated', { id: req.params.id, name, price, action: 'updated' });
+      res.json({ id: req.params.id, name, price });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to update packet' });
+    }
+  });
+
   app.delete('/api/packets/:id', authMiddleware, adminOnly, (req, res) => {
     try {
       db.prepare('DELETE FROM packets WHERE id = ?').run(req.params.id);
@@ -390,12 +401,13 @@ async function startServer() {
   app.get('/api/customers', authMiddleware, (req, res) => {
     try {
       const customers = db.prepare(`
-        SELECT c.*,
+        SELECT c.*, u.name as collector_name,
                (SELECT group_concat(billing_period) FROM transactions t 
                 WHERE t.customer_id = c.id 
                 AND t.category = 'Tagihan Bulanan'
                 AND t.status != 'cancelled') as paid_months
         FROM customers c 
+        LEFT JOIN users u ON c.collector_id = u.id
         ORDER BY name ASC
       `).all();
       res.json(customers);
@@ -450,10 +462,11 @@ async function startServer() {
   app.get('/api/reports/payments', authMiddleware, adminOnly, (req, res) => {
     try {
       const summary = db.prepare(`
-        SELECT c.name as customer_name, t.billing_period, t.status, t.amount
+        SELECT c.id as customer_id, c.name as customer_name, c.address as customer_address, c.created_at as customer_created_at,
+               t.billing_period, t.status, t.amount, t.transaction_date, u.name as collector_name
         FROM customers c
-        LEFT JOIN transactions t ON c.id = t.customer_id
-        WHERE t.billing_period IS NOT NULL
+        LEFT JOIN transactions t ON c.id = t.customer_id AND t.category = 'Tagihan Bulanan' AND t.status != 'cancelled'
+        LEFT JOIN users u ON t.user_id = u.id
         ORDER BY c.name ASC, t.billing_period DESC
       `).all();
       res.json(summary);
