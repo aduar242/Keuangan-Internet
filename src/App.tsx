@@ -39,6 +39,8 @@ import {
   MinusCircle,
   UserCheck,
   UserX,
+  Home,
+  SunMoon,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Transaction, DashboardStats, Customer, Packet, AppSettings } from './types';
@@ -114,6 +116,24 @@ export default function App() {
   const [receiptToPreview, setReceiptToPreview] = useState<{ transaction: Transaction; userName: string } | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [theme, setTheme] = useState<'light' | 'dark' | 'auto'>(() => {
+    const saved = localStorage.getItem('theme');
+    return (saved as 'light' | 'dark' | 'auto') || 'auto';
+  });
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    const isDark = 
+      theme === 'dark' || 
+      (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches) ||
+      (theme === 'auto' && (new Date().getHours() >= 18 || new Date().getHours() < 6));
+
+    if (isDark) {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, [theme]);
 
   useEffect(() => {
     socket.on('transaction:created', () => setRefreshTrigger(prev => prev + 1));
@@ -256,10 +276,15 @@ export default function App() {
     return <LoginScreen onLogin={handleLogin} />;
   }
 
+  const isDarkActual = 
+    theme === 'dark' || 
+    (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches) ||
+    (theme === 'auto' && (new Date().getHours() >= 18 || new Date().getHours() < 6));
+
   return (
-    <div className="min-h-screen flex flex-col md:flex-row">
+    <div className={cn("min-h-screen flex flex-col md:flex-row bg-slate-50 dark:bg-slate-950 transition-colors duration-500", isDarkActual && "dark")}>
       {/* Sidebar - Desktop */}
-      <aside className="hidden md:flex w-64 bg-slate-900 text-slate-300 flex-col p-6 space-y-8 sticky top-0 h-screen">
+      <aside className="hidden md:flex w-64 bg-slate-900 border-r border-slate-800 flex-col p-6 space-y-8 sticky top-0 h-screen">
         <div className="flex items-center gap-3 text-white">
           <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
             <Coins className="w-6 h-6" />
@@ -352,10 +377,10 @@ export default function App() {
               <Coins className="w-6 h-6 text-white" />
             </div>
             <div>
-              <span className="block font-black text-slate-900 tracking-tighter text-lg leading-none">{settings?.company_name || 'RT/RW NET'}</span>
+              <span className="block font-black text-slate-900 dark:text-white tracking-tighter text-lg leading-none">{settings?.company_name || 'RT/RW NET'}</span>
               <div className="flex items-center gap-1.5 mt-1">
                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{user.role}</span>
-                <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700"></span>
                 <button 
                   onClick={checkPrinter}
                   disabled={printerStatus === 'checking'}
@@ -368,7 +393,7 @@ export default function App() {
             </div>
           </div>
           <button 
-            className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 active:scale-95 transition-all"
+            className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all"
             onClick={handleLogout}
           >
             <LogOut className="w-5 h-5" />
@@ -420,6 +445,11 @@ export default function App() {
                     deferredPrompt={deferredPrompt} 
                     onInstall={handleInstallClick} 
                     refreshTrigger={refreshTrigger}
+                    theme={theme}
+                    setTheme={(t) => {
+                      setTheme(t);
+                      localStorage.setItem('theme', t);
+                    }}
                   />
                 )}
                 {activeTab === 'history' && <AdminDashboard user={user} settings={settings} refreshTrigger={refreshTrigger} setRefreshTrigger={setRefreshTrigger} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
@@ -466,32 +496,30 @@ function SidebarLink({ icon, label, onClick, active = false }: { icon: React.Rea
 
 function MobileNav({ activeTab, setActiveTab, user }: { activeTab: string, setActiveTab: (t: string) => void, user: User }) {
   return (
-    <nav className="md:hidden fixed bottom-6 left-4 right-4 bg-slate-900 shadow-2xl shadow-indigo-900/40 px-6 py-3 rounded-2xl flex items-center justify-between z-[100] border border-slate-800 backdrop-blur-md bg-opacity-95">
-      <MobileNavItem active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<LayoutDashboard className="w-6 h-6" />} />
-      <MobileNavItem active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} icon={<UsersIcon className="w-6 h-6" />} />
-      {user.role === 'admin' && (
-        <>
-          <MobileNavItem active={activeTab === 'packets'} onClick={() => setActiveTab('packets')} icon={<BarChart3 className="w-6 h-6" />} />
-          <MobileNavItem active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} icon={<CalendarCheck2 className="w-6 h-6" />} />
-          <MobileNavItem active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings className="w-6 h-6" />} />
-        </>
+    <nav className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-sm bg-white/90 dark:bg-slate-900/90 shadow-2xl shadow-indigo-500/20 dark:shadow-none px-6 py-4 rounded-[2rem] flex items-center justify-between z-[100] border border-slate-200/50 dark:border-slate-800/50 backdrop-blur-2xl ring-1 ring-black/5 dark:ring-white/5">
+      <MobileNavItem active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home className="w-6 h-6" />} label="Home" />
+      <MobileNavItem active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} icon={<UsersIcon className="w-6 h-6" />} label="Pelanggan" />
+      {user.role === 'admin' ? (
+        <MobileNavItem active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings className="w-6 h-6" />} label="Set" />
+      ) : (
+        <MobileNavItem active={activeTab === 'history'} onClick={() => setActiveTab('history')} icon={<History className="w-6 h-6" />} label="History" />
       )}
-      <MobileNavItem active={activeTab === 'history'} onClick={() => setActiveTab('history')} icon={<History className="w-6 h-6" />} />
     </nav>
   );
 }
 
-function MobileNavItem({ active, onClick, icon }: { active: boolean, onClick: () => void, icon: React.ReactNode }) {
+function MobileNavItem({ active, onClick, icon, label }: { active: boolean, onClick: () => void, icon: React.ReactNode, label?: string }) {
   return (
     <button onClick={onClick} className={cn(
-      "p-2 rounded-xl transition-all duration-300 relative",
-      active ? "text-indigo-400 scale-110" : "text-slate-500"
+      "flex flex-col items-center justify-center p-1.5 rounded-2xl transition-all duration-300 relative",
+      active ? "text-indigo-600 dark:text-indigo-400 scale-110" : "text-slate-400 dark:text-slate-500"
     )}>
       {icon}
+      {label && <span className="text-[8px] font-black uppercase tracking-widest mt-1">{label}</span>}
       {active && (
         <motion.div 
           layoutId="mobile-nav-indicator"
-          className="absolute -bottom-1 left-1 right-1 h-0.5 bg-indigo-500 rounded-full"
+          className="absolute -top-1 w-1 h-1 bg-indigo-600 dark:bg-indigo-400 rounded-full"
         />
       )}
     </button>
@@ -735,9 +763,9 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
-            <h2 className="text-2xl font-black tracking-tight text-slate-800">Ringkasan Sistem</h2>
+            <h2 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white">Ringkasan Sistem</h2>
           </div>
-          <p className="text-slate-500 text-sm">Monitoring arus kas dan operasional RT/RW Net</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Monitoring arus kas dan operasional RT/RW Net</p>
         </div>
         <div className="flex gap-3">
           <button onClick={() => setShowModal(true)} className="btn-primary group">
@@ -760,7 +788,7 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
         <motion.div 
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-amber-50 border border-amber-200 rounded-[2rem] p-8 shadow-xl shadow-amber-500/5"
+          className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/50 rounded-[2rem] p-8 shadow-xl shadow-amber-500/5"
         >
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
@@ -768,8 +796,8 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
                 <Coins className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-black text-amber-900 leading-tight">Konfirmasi Setoran</h3>
-                <p className="text-amber-700/60 text-xs font-bold uppercase tracking-widest">Uang fisik sudah siap diterima</p>
+                <h3 className="font-black text-amber-900 dark:text-amber-200 leading-tight">Konfirmasi Setoran</h3>
+                <p className="text-amber-700/60 dark:text-amber-400/60 text-xs font-bold uppercase tracking-widest">Uang fisik sudah siap diterima</p>
               </div>
             </div>
             <span className="hidden md:block text-[10px] font-black bg-amber-500 text-white px-3 py-1 rounded-full">ACTION REQUIRED</span>
@@ -777,10 +805,10 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {pendingDeposits.map(d => (
-              <div key={d.collector_id} className="bg-white p-5 rounded-2xl border border-amber-200 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow group">
+              <div key={d.collector_id} className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-amber-200 dark:border-amber-800/50 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow group">
                 <div className="mb-4">
-                  <p className="font-black text-slate-800 text-sm uppercase mb-1 tracking-tight">{d.collector_name}</p>
-                  <div className="flex items-center gap-2 text-[10px] text-slate-400 font-bold mb-3">
+                  <p className="font-black text-slate-800 dark:text-slate-100 text-sm uppercase mb-1 tracking-tight">{d.collector_name}</p>
+                  <div className="flex items-center gap-2 text-[10px] text-slate-400 dark:text-slate-500 font-bold mb-3">
                     <FileText className="w-3 h-3" />
                     <span>{d.transactionCount} TRANSAKSI BELUM DISETOR</span>
                   </div>
@@ -801,19 +829,19 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
       )}
 
       {/* Transactions List */}
-      <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden">
-        <div className="px-8 py-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between bg-white gap-4">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200 dark:border-slate-800 overflow-hidden">
+        <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between bg-white dark:bg-slate-900 gap-4">
           <div>
-            <h3 className="font-black text-slate-800 tracking-tight">Log Transaksi Keluar Masuk</h3>
-            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Real-time update dari lapangan</p>
+            <h3 className="font-black text-slate-800 dark:text-white tracking-tight">Log Transaksi Keluar Masuk</h3>
+            <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-1">Real-time update dari lapangan</p>
           </div>
           <div className="flex items-center gap-3">
              <div className="relative group">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600 group-focus-within:text-indigo-500 transition-colors" />
                 <input 
                   type="text" 
                   placeholder="Cari transaksi..."
-                  className="pl-9 pr-4 py-2 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 w-full md:w-64 transition-all"
+                  className="pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/20 w-full md:w-64 transition-all dark:text-slate-200 dark:placeholder:text-slate-600"
                 />
              </div>
           </div>
@@ -830,7 +858,7 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
               className="relative overflow-hidden group border-b border-slate-50 last:border-0"
             >
               {/* Background Actions (Revealed via Drag) */}
-              <div className="absolute inset-0 bg-slate-50 flex items-center justify-end px-6 gap-3">
+              <div className="absolute inset-0 bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 flex items-center justify-end px-6 gap-3">
                  <button onClick={() => handleDelete(t.id)} className="w-12 h-12 bg-rose-500 text-white rounded-2xl shadow-lg shadow-rose-200 flex items-center justify-center">
                     <Trash2 className="w-6 h-6" />
                  </button>
@@ -844,7 +872,7 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
                 dragConstraints={{ left: -140, right: 0 }}
                 dragElastic={0.1}
                 whileDrag={{ scale: 1.02 }}
-                className="p-5 hover:bg-slate-50/50 transition-colors relative z-10 bg-white"
+                className="p-5 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors relative z-10 bg-white dark:bg-slate-900"
               >
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex items-center gap-3">
@@ -878,22 +906,22 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
                   </div>
                 </div>
                 
-                <div className="flex justify-between items-center mt-4 pt-3 border-t border-slate-50">
-                  <div className="text-[9px] text-slate-400 font-black uppercase tracking-widest flex items-center gap-3">
+                <div className="flex justify-between items-center mt-4 pt-3 border-t border-slate-50 dark:border-slate-800">
+                  <div className="text-[9px] text-slate-400 dark:text-slate-600 font-black uppercase tracking-widest flex items-center gap-3">
                     <span className="flex items-center gap-1"><Calendar className="w-3" /> {t.transaction_date.split('-').reverse().join('/')}</span>
                   </div>
                   <div className="text-right">
                     <div className={cn(
                       "font-black tabular-nums text-base",
-                      t.type === 'pemasukan' ? "text-emerald-600" : "text-rose-600"
+                      t.type === 'pemasukan' ? "text-emerald-600 dark:text-emerald-500" : "text-rose-600 dark:text-rose-500"
                     )}>
                       {t.type === 'pemasukan' ? '+' : '-'} {new Intl.NumberFormat('id-ID').format(t.amount)}
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-50 justify-center">
-                    <span className="text-[8px] font-black text-slate-300 uppercase tracking-tighter">Geser ke kiri untuk aksi</span>
-                    <ArrowLeft className="w-3 h-3 text-slate-300 animate-pulse" />
+                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-50 dark:border-slate-800 justify-center">
+                    <span className="text-[8px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-tighter">Geser ke kiri untuk aksi</span>
+                    <ArrowLeft className="w-3 h-3 text-slate-300 dark:text-slate-700 animate-pulse" />
                 </div>
               </motion.div>
             </motion.div>
@@ -909,7 +937,7 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="text-slate-400 text-[10px] uppercase tracking-[0.2em] font-black bg-slate-50/50">
+              <tr className="text-slate-400 dark:text-slate-500 text-[10px] uppercase tracking-[0.2em] font-black bg-slate-50/50 dark:bg-slate-800/50 backdrop-blur-md">
                 <th className="px-8 py-5">Tanggal</th>
                 <th className="px-8 py-5">Pelanggan / Kategori</th>
                 <th className="px-8 py-5 text-center">Status Bukti</th>
@@ -917,13 +945,13 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
                 <th className="px-8 py-5 text-center">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50 text-sm">
+            <tbody className="divide-y divide-slate-50 dark:divide-slate-800 text-sm">
               {transactions.map((t) => (
-                <tr key={t.id} className="hover:bg-slate-50/50 transition-colors group">
-                  <td className="px-8 py-5 font-mono text-slate-400 text-xs">{t.transaction_date}</td>
+                <tr key={t.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
+                  <td className="px-8 py-5 font-mono text-slate-400 dark:text-slate-600 text-xs">{t.transaction_date}</td>
                   <td className="px-8 py-5">
-                    <div className="font-black text-slate-800">{t.customer_name || t.category}</div>
-                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
+                    <div className="font-black text-slate-800 dark:text-slate-200">{t.customer_name || t.category}</div>
+                    <div className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-tighter">
                       {t.customer_name ? t.category : t.description}
                       {t.billing_period && t.category === 'Tagihan Bulanan' && ` - ${t.billing_period.split(',').map(p => formatPeriod(p.trim())).join(', ')}`}
                     </div>
@@ -931,9 +959,9 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
                   <td className="px-8 py-5 text-center">
                     <div className={cn(
                       "text-[9px] font-black uppercase px-3 py-1 rounded-full inline-flex items-center gap-1.5",
-                      t.status === 'confirmed' ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : 
-                      t.status === 'deposited' ? "bg-amber-50 text-amber-600 border border-amber-100" :
-                      "bg-slate-50 text-slate-400"
+                      t.status === 'confirmed' ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/50" : 
+                      t.status === 'deposited' ? "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-800/50" :
+                      "bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-600"
                     )}>
                       {t.status === 'confirmed' && <Check className="w-2.5 h-2.5" />}
                       {t.status}
@@ -941,7 +969,7 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
                   </td>
                   <td className={cn(
                     "px-8 py-5 text-right font-black tabular-nums text-base",
-                    t.type === 'pemasukan' ? "text-emerald-600" : "text-rose-600"
+                    t.type === 'pemasukan' ? "text-emerald-600 dark:text-emerald-500" : "text-rose-600 dark:text-rose-500"
                   )}>
                     {t.type === 'pemasukan' ? '+' : '-'} {new Intl.NumberFormat('id-ID').format(t.amount)}
                   </td>
@@ -950,21 +978,21 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
                       <button 
                         onClick={() => printTransaction(t.id)}
                         disabled={isPrinting}
-                        className="p-2 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                        className="p-2 text-slate-300 dark:text-slate-600 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-all"
                       >
                         <Printer className="w-4 h-4" />
                       </button>
                       {t.customer_id && (
                         <button 
                           onClick={() => handleDownloadInvoice(t.id)}
-                          className="p-2 text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                          className="p-2 text-slate-300 dark:text-slate-600 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-all"
                         >
                           <Download className="w-4 h-4" />
                         </button>
                       )}
                       <button 
                         onClick={() => handleDelete(t.id)}
-                        className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                        className="p-2 text-slate-300 dark:text-slate-600 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-all"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -2613,7 +2641,7 @@ function PacketManagement({ user, refreshTrigger }: { user: User, refreshTrigger
   );
 }
 
-function SettingsManagement({ user, deferredPrompt, onInstall, refreshTrigger }: { user: User, deferredPrompt?: any, onInstall?: () => void, refreshTrigger?: number }) {
+function SettingsManagement({ user, deferredPrompt, onInstall, refreshTrigger, theme, setTheme }: { user: User, deferredPrompt?: any, onInstall?: () => void, refreshTrigger?: number, theme: 'light' | 'dark' | 'auto', setTheme: (t: 'light' | 'dark' | 'auto') => void }) {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -2682,7 +2710,36 @@ function SettingsManagement({ user, deferredPrompt, onInstall, refreshTrigger }:
         </div>
       </header>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-800">
+        <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-xs flex items-center gap-2 mb-4">
+          <SunMoon className="w-4 h-4 text-indigo-500" /> Mode Tampilan
+        </h3>
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { id: 'light', label: 'Terang', icon: <PlusCircle className="w-4 h-4" /> },
+            { id: 'dark', label: 'Gelap', icon: <MinusCircle className="w-4 h-4" /> },
+            { id: 'auto', label: 'Auto (Waktu)', icon: <RefreshCw className="w-4 h-4" /> },
+          ].map((mode) => (
+            <button
+              key={mode.id}
+              onClick={() => setTheme(mode.id as any)}
+              className={cn(
+                "flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-xs transition-all border",
+                theme === mode.id 
+                  ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-none" 
+                  : "bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
+              )}
+            >
+              {mode.id === 'light' && <PlusCircle className="w-4 h-4" />}
+              {mode.id === 'dark' && <MinusCircle className="w-4 h-4" />}
+              {mode.id === 'auto' && <RefreshCw className="w-4 h-4" />}
+              <span>{mode.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-800 overflow-hidden">
         <div className="p-8 space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-4">
@@ -2719,6 +2776,39 @@ function SettingsManagement({ user, deferredPrompt, onInstall, refreshTrigger }:
               </div>
             </div>
 
+            <div className="space-y-4">
+              <h3 className="font-black text-slate-800 uppercase tracking-widest text-xs flex items-center gap-2">
+                <SunMoon className="w-4 h-4 text-indigo-500" /> Tampilan Aplikasi
+              </h3>
+              <div className="grid grid-cols-3 gap-2">
+                {(['light', 'dark', 'auto'] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setTheme(t)}
+                    className={cn(
+                      "py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border-2",
+                      theme === t 
+                        ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200" 
+                        : "bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-400 dark:text-slate-500 hover:border-slate-200"
+                    )}
+                  >
+                    <div className="flex flex-col items-center gap-1.5">
+                      {t === 'light' && <Sun className="w-4 h-4" />}
+                      {t === 'dark' && <Moon className="w-4 h-4" />}
+                      {t === 'auto' && <SunMoon className="w-4 h-4" />}
+                      {t === 'auto' ? 'Otomatis' : t === 'light' ? 'Terang' : 'Gelap'}
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-slate-400 font-medium italic mt-1 ml-1 leading-relaxed">
+                * Otomatis: Mengikuti pengaturan sistem atau jadwal malam (18:00 - 06:00)
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-4">
               <h3 className="font-black text-slate-800 uppercase tracking-widest text-xs flex items-center gap-2">
                 <FileText className="w-4 h-4 text-emerald-500" /> Konfigurasi Struk
