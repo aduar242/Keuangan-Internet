@@ -2853,6 +2853,59 @@ function SettingsManagement({ user, deferredPrompt, onInstall, refreshTrigger }:
           </button>
         </div>
       )}
+
+      {user.role === 'admin' && (
+        <div className="bg-rose-50/70 rounded-[2.5rem] border border-rose-200 overflow-hidden mt-12 animate-in fade-in slide-in-from-bottom-4">
+          <div className="p-8 space-y-6">
+            <div className="flex items-center gap-4">
+               <div className="w-14 h-14 bg-rose-500 rounded-3xl flex items-center justify-center text-white shadow-2xl shadow-rose-200">
+                  <Trash2 className="w-8 h-8" />
+               </div>
+               <div>
+                  <h3 className="text-xl font-black text-rose-600 tracking-tight">Danger Zone</h3>
+                  <p className="text-rose-500/80 text-sm font-bold uppercase tracking-widest text-[10px]">Tindakan Tidak Terpulihkan</p>
+               </div>
+            </div>
+            
+            <div className="bg-white p-8 rounded-[2rem] border border-rose-100 flex flex-col lg:flex-row lg:items-center justify-between gap-8 shadow-sm">
+               <div className="max-w-md">
+                  <h4 className="font-black text-slate-800 text-lg">Kosongkan Database</h4>
+                  <p className="text-sm text-slate-500 mt-2 leading-relaxed">
+                    Menghapus seluruh data <strong>Pelanggan</strong> dan <strong>Riwayat Transaksi</strong>. 
+                    Akun Petugas dan Pengaturan Bisnis tetap aman. Gunakan ini jika ingin mulai dari awal (Test over).
+                  </p>
+               </div>
+               <button 
+                 onClick={async () => {
+                   if (confirm('APAKAH ANDA YAKIN? Semua data pelanggan dan transaksi akan DIHAPUS PERMANEN. Akun petugas tidak akan terhapus.')) {
+                     const pass = prompt('Ketik "KONFIRMASI" untuk melanjutkan:');
+                     if (pass === 'KONFIRMASI') {
+                       try {
+                          const res = await fetch('/api/admin/reset-database', {
+                            method: 'POST',
+                            headers: { 'x-user-id': String(user.id) }
+                          });
+                          if (res.ok) {
+                            alert('Database berhasil dikosongkan!');
+                            window.location.reload();
+                          } else {
+                            alert('Gagal mengosongkan database.');
+                          }
+                       } catch (err) {
+                          alert('Terjadi kesalahan koneksi.');
+                       }
+                     }
+                   }
+                 }}
+                 className="bg-rose-500 hover:bg-black text-white font-black px-10 py-5 rounded-2xl shadow-xl shadow-rose-200 transition-all active:scale-95 text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3"
+               >
+                 <Trash2 className="w-5 h-5" />
+                 Reset Database
+               </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

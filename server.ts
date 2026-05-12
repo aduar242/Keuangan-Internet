@@ -549,6 +549,20 @@ async function startServer() {
     }
   });
 
+  app.post('/api/admin/reset-database', authMiddleware, adminOnly, (req, res) => {
+    try {
+      db.transaction(() => {
+        db.prepare('DELETE FROM transactions').run();
+        db.prepare('DELETE FROM customers').run();
+        db.prepare('DELETE FROM packets').run();
+        // Keep users and settings as requested
+      })();
+      res.json({ message: 'Database reset successful' });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to reset database' });
+    }
+  });
+
   // Vite
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({ server: { middlewareMode: true }, appType: 'spa' });
