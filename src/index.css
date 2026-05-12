@@ -34,7 +34,7 @@
 }
 
 .glass-card {
-  @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-sm transition-all hover:shadow-md;
+  @apply bg-white border border-slate-100 shadow-sm transition-all hover:shadow-md;
 }
 
 .btn-primary {

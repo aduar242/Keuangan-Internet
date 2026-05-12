@@ -362,7 +362,7 @@ export default function App() {
                   disabled={printerStatus === 'checking'}
                   className="flex items-center gap-1 active:scale-95 transition-transform"
                 >
-                  <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse", printerStatus === 'ready' ? "bg-emerald-500" : "bg-rose-500")}></div>
+                  <div className={cn("w-1.5 h-1.5 rounded-full", printerStatus === 'ready' ? "bg-emerald-500" : "bg-rose-500")}></div>
                   <span className="text-[9px] font-bold text-slate-400 uppercase">PRINTER {printerStatus === 'ready' ? 'SIAP' : (printerStatus === 'checking' ? '...' : 'OFF')}</span>
                 </button>
               </div>
@@ -467,7 +467,7 @@ function SidebarLink({ icon, label, onClick, active = false }: { icon: React.Rea
 
 function MobileNav({ activeTab, setActiveTab, user }: { activeTab: string, setActiveTab: (t: string) => void, user: User }) {
   return (
-    <nav className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-sm bg-white shadow-2xl shadow-indigo-500/20 px-6 py-4 rounded-[2.5rem] flex items-center justify-between z-[100] border border-slate-200/50 backdrop-blur-2xl ring-1 ring-black/5">
+    <nav className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-sm bg-white shadow-xl px-6 py-4 rounded-[2.5rem] flex items-center justify-between z-[100] border border-slate-200 ring-1 ring-black/5">
       <MobileNavItem active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home className="w-7 h-7" />} label="Utama" />
       <MobileNavItem active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} icon={<UsersIcon className="w-7 h-7" />} label="Pelanggan" />
       {user.role === 'admin' ? (
@@ -531,7 +531,7 @@ function LoginScreen({ onLogin }: { onLogin: (e: React.FormEvent<HTMLFormElement
           </div>
         </div>
 
-        <div className="bg-[#11141b]/80 backdrop-blur-2xl border border-white/5 p-10 rounded-[3rem] shadow-2xl relative">
+        <div className="bg-[#11141b] border border-white/5 p-10 rounded-[3rem] shadow-xl relative">
           <div className="absolute -top-4 -right-4 bg-indigo-600 text-white text-[9px] font-black px-3 py-1 rounded-full shadow-lg border border-indigo-400 uppercase tracking-widest">PRO EDITION</div>
           
           <form onSubmit={onLogin} className="space-y-8">
@@ -738,7 +738,7 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+            <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
             <h2 className="text-2xl font-black tracking-tight text-slate-800">Ringkasan Sistem</h2>
           </div>
           <p className="text-slate-500 text-sm font-medium">Monitoring arus kas dan operasional RT/RW Net</p>
@@ -762,9 +762,10 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
       {/* Pending Deposits Section */}
       {pendingDeposits.length > 0 && (
         <motion.div 
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-amber-50 border border-amber-200 rounded-[2rem] p-8 shadow-xl shadow-amber-500/5"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.2 }}
+          className="bg-amber-50 border border-amber-200 rounded-[2rem] p-8 shadow-md"
         >
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
@@ -897,7 +898,7 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
                 </div>
                 <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-50 justify-center">
                     <span className="text-[8px] font-black text-slate-300 uppercase tracking-tighter">Geser ke kiri untuk aksi</span>
-                    <ArrowLeft className="w-3 h-3 text-slate-300 animate-pulse" />
+                    <ArrowLeft className="w-3 h-3 text-slate-300" />
                 </div>
               </motion.div>
             </motion.div>
@@ -913,7 +914,7 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="text-slate-400 text-[10px] uppercase tracking-[0.2em] font-black bg-slate-50/50 backdrop-blur-md">
+              <tr className="text-slate-400 text-[10px] uppercase tracking-[0.2em] font-black bg-slate-50/50">
                 <th className="px-8 py-5">Tanggal</th>
                 <th className="px-8 py-5">Pelanggan / Kategori</th>
                 <th className="px-8 py-5 text-center">Status Bukti</th>
@@ -1384,9 +1385,10 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
         <AnimatePresence>
           {showPrinterSettings && (
             <motion.div 
-               initial={{ opacity: 0, height: 0 }}
-               animate={{ opacity: 1, height: 'auto' }}
-               exit={{ opacity: 0, height: 0 }}
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+               transition={{ duration: 0.2 }}
                className="bg-indigo-600 rounded-3xl p-5 overflow-hidden"
             >
                <div className="flex items-center justify-between mb-4">
@@ -1407,7 +1409,7 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
 
       <header className="mb-6">
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-lg shadow-emerald-200 animate-pulse"></div>
+          <div className="w-3 h-3 rounded-full bg-emerald-500 shadow shadow-emerald-200"></div>
           <h2 className="text-3xl font-black tracking-tight text-slate-800 font-sans">Input Tagihan</h2>
         </div>
         <p className="text-slate-500 text-sm font-medium">Layanan pencatatan pembayaran pelanggan</p>
@@ -1415,9 +1417,10 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
 
       {/* Input Form Card */}
       <motion.div 
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-[3rem] p-8 md:p-10 shadow-2xl shadow-slate-200 border border-slate-100"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.2 }}
+        className="bg-white rounded-[3rem] p-8 md:p-10 shadow-lg border border-slate-100"
       >
         <form onSubmit={handleSubmit} className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -1462,10 +1465,10 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
                 <input type="hidden" name="customer_id" value={selectedCustomerId} />
                 
                 {showCustomerList && (
-                  <div className="absolute z-[110] left-0 right-0 mt-2 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-indigo-100 max-h-72 overflow-y-auto overflow-x-hidden p-2 animate-in fade-in zoom-in-95 duration-200">
+                  <div className="absolute z-[110] left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-indigo-100 max-h-72 overflow-y-auto overflow-x-hidden p-2">
                     <div className="px-3 py-2 border-b border-slate-50 mb-1 flex justify-between items-center">
                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Pilih Pelanggan ({filteredCustomers.length})</p>
-                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                     </div>
                     {filteredCustomers.length > 0 ? (
                       filteredCustomers.map(c => (
@@ -1534,8 +1537,9 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
 
           {selectedCategory === 'Tagihan Bulanan' && unpaidMonthsList.length > 0 ? (
             <motion.div 
-               initial={{ opacity: 0, height: 0 }}
-               animate={{ opacity: 1, height: 'auto' }}
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               transition={{ duration: 0.2 }}
                className="space-y-4"
             >
               <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.1em] px-1">Pilih Bulan yang Dibayar (Bisa pilih banyak)</label>
@@ -1567,7 +1571,7 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
 
           <div className="space-y-4">
              <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.1em] px-1">Konfirmasi Nominal</label>
-             <div className="bg-slate-900 border-b-8 border-slate-950 p-10 rounded-[2.5rem] text-center shadow-2xl overflow-hidden relative group">
+             <div className="bg-slate-900 border-b-8 border-slate-950 p-10 rounded-[2.5rem] text-center shadow-lg overflow-hidden relative group">
                 <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                   <Coins className="w-20 h-20 text-white" />
                 </div>
@@ -1590,7 +1594,7 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
           <button 
             type="submit" 
             disabled={loading || !selectedCustomerId || (selectedCategory === 'Tagihan Bulanan' && selectedPeriods.length === 0)}
-            className="w-full bg-indigo-600 hover:bg-black text-white py-8 rounded-[3rem] font-black text-xl uppercase tracking-[0.2em] shadow-2xl shadow-indigo-300 transition-all active:scale-95 disabled:opacity-30 flex flex-col items-center justify-center gap-1 group"
+            className="w-full bg-indigo-600 hover:bg-black text-white py-8 rounded-[3rem] font-black text-xl uppercase tracking-[0.2em] shadow-lg transition-all active:scale-95 disabled:opacity-30 flex flex-col items-center justify-center gap-1 group"
           >
             <div className="flex items-center gap-3">
                {loading ? <RefreshCw className="w-6 h-6 animate-spin" /> : <CheckCircle className="w-6 h-6 group-hover:scale-110 transition-transform" />}
@@ -2805,7 +2809,7 @@ function SettingsManagement({ user, deferredPrompt, onInstall, refreshTrigger }:
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-500/5 rounded-full -ml-32 -mb-32 blur-3xl"></div>
           
           <div className="flex items-center gap-6 relative z-10">
-            <div className="w-20 h-20 bg-white/10 rounded-3xl flex items-center justify-center text-white backdrop-blur-xl border border-white/20 shadow-inner">
+            <div className="w-20 h-20 bg-white/10 rounded-3xl flex items-center justify-center text-white border border-white/20 shadow-inner">
               <Download className="w-10 h-10" />
             </div>
             <div>
