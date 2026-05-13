@@ -344,6 +344,23 @@ async function startServer() {
     }
   });
 
+  app.get('/api/deposits/stats', authMiddleware, (req: any, res) => {
+    try {
+      const stats = db.prepare(`
+        SELECT 
+          SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END) as heldAmount,
+          SUM(CASE WHEN status = 'deposited' THEN amount ELSE 0 END) as pendingConfirmation,
+          SUM(CASE WHEN status = 'confirmed' THEN amount ELSE 0 END) as confirmedAmount,
+          COUNT(CASE WHEN status = 'deposited' THEN 1 END) as pendingCount
+        FROM transactions 
+        WHERE user_id = ? AND type = 'pemasukan'
+      `).get(req.user.id) as any;
+      res.json(stats);
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to fetch deposit stats' });
+    }
+  });
+
   app.post('/api/deposits/confirm', authMiddleware, adminOnly, (req, res) => {
     try {
       const { collector_id } = req.body;
