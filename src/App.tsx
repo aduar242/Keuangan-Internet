@@ -50,6 +50,41 @@ import { io, Socket } from 'socket.io-client';
 
 const socket: Socket = io();
 
+// Helpers for billing
+const formatPeriod = (period: string) => {
+  if (!period || period === '') return '';
+  const [year, month] = period.split('-');
+  const monthNames = [
+    'JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN',
+    'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'
+  ];
+  return `${monthNames[parseInt(month) - 1]} ${year}`;
+};
+
+const getUnpaidMonthsList = (customer: Customer | undefined) => {
+  if (!customer) return [];
+  
+  const paidPeriods = new Set<string>();
+  if (customer.paid_months) {
+    customer.paid_months.split(',').forEach(p => paidPeriods.add(p.trim()));
+  }
+
+  const joinMonth = customer.created_at?.slice(0, 7) || '2000-01';
+  const now = new Date();
+  const currentMonth = now.toISOString().slice(0, 7);
+  const months = [];
+  
+  for (let i = -12; i <= 4; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+      const period = d.toISOString().slice(0, 7);
+      if (period < joinMonth) continue;
+      if (!paidPeriods.has(period)) {
+          months.push(period);
+      }
+  }
+  return months.sort();
+};
+
 function FormattedNumberInput({ value, onChange, placeholder, className, required, name }: { value: string, onChange: (val: string) => void, placeholder?: string, className?: string, required?: boolean, name?: string }) {
   const [displayValue, setDisplayValue] = useState('');
 
@@ -96,16 +131,6 @@ const getBillingPeriods = () => {
     periods.push(d.toISOString().slice(0, 7));
   }
   return periods.sort();
-};
-
-const formatPeriod = (period: string) => {
-  if (!period) return '';
-  const [year, month] = period.split('-');
-  const monthNames = [
-    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-  ];
-  return `${monthNames[parseInt(month) - 1]} ${year}`;
 };
 
 export default function App() {
@@ -1212,6 +1237,7 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
   const [historyTab, setHistoryTab] = useState<'transaksi' | 'rekap'>('transaksi');
   const [depositStats, setDepositStats] = useState({ heldAmount: 0, pendingConfirmation: 0, confirmedAmount: 0, pendingCount: 0 });
   const [recapToPreview, setRecapToPreview] = useState<Transaction[] | null>(null);
+  const [defaultMonthCount, setDefaultMonthCount] = useState(2);
 
   const printTransaction = async (id: number) => {
     try {
@@ -1303,10 +1329,9 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
         // Calculate unpaid months for this customer
         const unpaid = getUnpaidMonthsList(customer);
         if (unpaid.length > 0) {
-          // If no periods currently selected (or if user just switched customer), select the first unpaid
-          if (selectedPeriods.length === 0) {
-             setSelectedPeriods([unpaid[0]]);
-          }
+          // Simplest logic: always take the first N months from the unpaid list
+          // This naturally covers all overdue months first, then future ones
+          setSelectedPeriods(unpaid.slice(0, defaultMonthCount));
         } else {
           setSelectedPeriods([]);
         }
@@ -1332,7 +1357,7 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
       setSelectedPeriods([]);
       setSearchTerm('');
     }
-  }, [selectedCustomerId, customers, selectedCategory]);
+  }, [selectedCustomerId, customers, selectedCategory, defaultMonthCount]);
 
   // Handle category changes to re-sync price
   useEffect(() => {
@@ -1352,42 +1377,6 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.address?.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  // Robust logic for calculating unpaid months
-  const getUnpaidMonthsList = (customer: Customer | undefined) => {
-    if (!customer) return [];
-    
-    const paidPeriods = new Set<string>();
-    if (customer.paid_months) {
-      customer.paid_months.split(',').forEach(p => paidPeriods.add(p.trim()));
-    }
-
-    const joinMonth = customer.created_at?.slice(0, 7) || '2000-01';
-    const now = new Date();
-    const months = [];
-    
-    // We check from join date up to 12 months ahead for advance payments
-    for (let i = -12; i <= 12; i++) {
-        const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-        const period = d.toISOString().slice(0, 7);
-        if (period < joinMonth) continue;
-        if (!paidPeriods.has(period)) {
-            months.push(period);
-        }
-    }
-    return months.sort();
-  };
-
-  // Helper for formatting period display
-  const formatPeriod = (period: string) => {
-    if (!period || period === '') return '';
-    const [year, month] = period.split('-');
-    const monthNames = [
-      'JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN',
-      'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'
-    ];
-    return `${monthNames[parseInt(month) - 1]} ${year}`;
-  };
 
   const selectedCustomer = customers.find(c => String(c.id) === selectedCustomerId);
   const unpaidMonthsList = getUnpaidMonthsList(selectedCustomer);
@@ -1751,8 +1740,27 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
                       if (!e.target.value) setSelectedCustomerId('');
                     }}
                     onFocus={() => setShowCustomerList(true)}
-                    className="w-full bg-slate-50 text-slate-900 border-2 border-slate-100 px-6 py-5 rounded-[1.5rem] focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-bold text-lg pr-12 placeholder:text-slate-300"
+                    className={cn(
+                      "w-full bg-slate-50 text-slate-900 border-2 border-slate-100 px-6 py-5 rounded-[1.5rem] focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-bold text-lg pr-12 placeholder:text-slate-300",
+                      selectedCustomerId && "bg-indigo-50/10 border-indigo-200"
+                    )}
                   />
+                  {selectedCustomerId && (
+                    <div className="absolute right-12 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none">
+                       {(() => {
+                          const customer = customers.find(c => String(c.id) === selectedCustomerId);
+                          if (!customer) return null;
+                          const unpaid = getUnpaidMonthsList(customer);
+                          const now = new Date();
+                          const currentMonth = now.toISOString().slice(0, 7);
+                          const hasPastUnpaid = unpaid.some(p => p <= currentMonth);
+                          
+                          if (unpaid.length === 0) return <span className="text-[8px] font-black bg-emerald-600 text-white px-2 py-0.5 rounded-full uppercase">LUNAS TOTAL</span>;
+                          if (hasPastUnpaid) return <span className="text-[8px] font-black bg-rose-600 text-white px-2 py-0.5 rounded-full uppercase">MENUNGGAK</span>;
+                          return <span className="text-[8px] font-black bg-indigo-600 text-white px-2 py-0.5 rounded-full uppercase">LUNAS BLN INI</span>;
+                       })()}
+                    </div>
+                  )}
                   {searchTerm && (
                     <button 
                       type="button"
@@ -1790,12 +1798,17 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
                           className="w-full text-left px-5 py-4 hover:bg-indigo-50/50 rounded-xl transition-all border-b last:border-0 border-slate-50 active:scale-[0.98] group"
                         >
                           <div className="font-bold text-slate-900 flex items-center justify-between mb-0.5">
-                            <span className="group-hover:text-indigo-600 transition-colors">{c.name}</span>
-                            {getUnpaidMonthsList(c).length === 0 ? (
-                              <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">LUNAS</span>
-                            ) : (
-                              <span className="text-[9px] font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100">{getUnpaidMonthsList(c).length} BLN</span>
-                            )}
+                            <span className="group-hover:text-indigo-600 transition-colors uppercase">{c.name}</span>
+                            {(() => {
+                              const unpaid = getUnpaidMonthsList(c);
+                              const now = new Date();
+                              const currentMonth = now.toISOString().slice(0, 7);
+                              const hasPastUnpaid = unpaid.some(p => p <= currentMonth);
+                              
+                              if (unpaid.length === 0) return <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">LUNAS TOTAL</span>;
+                              if (hasPastUnpaid) return <span className="text-[9px] font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100">MENUNGGAK</span>;
+                              return <span className="text-[9px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">LUNAS BULAN INI</span>;
+                            })()}
                           </div>
                           <div className="text-[10px] text-slate-500 uppercase flex justify-between items-center opacity-70">
                             <span className="truncate max-w-[150px] italic">{c.address}</span>
@@ -1884,33 +1897,64 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
                transition={{ duration: 0.2 }}
                className="space-y-4"
             >
-              <div className="flex justify-between items-center px-1">
+                <div className="flex justify-between items-center px-1">
                 <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.1em]">Pilih Bulan yang Dibayar</label>
-                <button 
-                  type="button"
-                  onClick={() => setSelectedPeriods(unpaidMonthsList)}
-                  className="text-[9px] font-black text-indigo-600 uppercase tracking-widest"
-                >
-                  Pilih Semua
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {unpaidMonthsList.map(m => (
-                  <button
-                    key={m}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center bg-slate-50 rounded-xl px-2 py-1 border border-slate-100">
+                    <span className="text-[8px] font-black text-slate-400 uppercase mr-2 ml-1">Auto:</span>
+                    <select 
+                      value={defaultMonthCount}
+                      onChange={(e) => setDefaultMonthCount(Number(e.target.value))}
+                      className="bg-transparent text-[10px] font-black text-indigo-600 outline-none cursor-pointer"
+                    >
+                      <option value={1}>1 Bln</option>
+                      <option value={2}>2 Bln</option>
+                      <option value={3}>3 Bln</option>
+                      <option value={4}>4 Bln</option>
+                      <option value={6}>6 Bln</option>
+                      <option value={12}>1 Thn</option>
+                    </select>
+                  </div>
+                  <button 
                     type="button"
-                    onClick={() => togglePeriod(m)}
-                    className={cn(
-                      "px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border-2",
-                      selectedPeriods.includes(m) 
-                        ? "bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-100 scale-105 z-10" 
-                        : "bg-slate-50 border-slate-100 text-slate-400 hover:border-slate-200"
-                    )}
+                    onClick={() => setSelectedPeriods(unpaidMonthsList)}
+                    className="text-[9px] font-black text-indigo-600 uppercase tracking-widest hover:underline"
                   >
-                    {formatPeriod(m)}
-                    {m > new Date().toISOString().slice(0, 7) && <span className="ml-1 opacity-50 text-[8px]">(DEPAN)</span>}
+                    Pilih Semua
                   </button>
-                ))}
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+                {unpaidMonthsList.map(m => {
+                  const isFuture = m > new Date().toISOString().slice(0, 7);
+                  return (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => togglePeriod(m)}
+                      className={cn(
+                        "relative px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border-2 flex flex-col items-center gap-1 min-w-[90px]",
+                        selectedPeriods.includes(m) 
+                          ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-100 scale-105 z-10" 
+                          : isFuture
+                            ? "bg-white border-slate-100 text-slate-400 hover:border-indigo-100"
+                            : "bg-rose-50 border-rose-100 text-rose-600 hover:border-rose-200"
+                      )}
+                    >
+                      <span>{formatPeriod(m)}</span>
+                      {isFuture ? (
+                        <span className="text-[7px] opacity-60 font-bold">Mendatang</span>
+                      ) : (
+                        <span className="text-[7px] font-bold">Tunggakan</span>
+                      )}
+                      {selectedPeriods.includes(m) && (
+                        <div className="absolute top-1 right-1 bg-white rounded-full p-0.5">
+                          <CheckCircle className="w-2 h-2 text-indigo-600" />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </motion.div>
           ) : selectedCategory === 'Tagihan Bulanan' && selectedCustomerId ? (
@@ -2601,6 +2645,7 @@ function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigg
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [isOldCustomer, setIsOldCustomer] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const currentMonthStr = new Date().toISOString().slice(0, 7);
 
   const fetchData = async () => {
     try {
@@ -2809,14 +2854,30 @@ function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigg
                 <div>
                    <h4 className="text-lg font-black text-slate-800 leading-tight">{c.name}</h4>
                    <div className="flex items-center gap-1.5 mt-2">
-                      <div className={cn(
-                        "px-3 py-1 rounded-full text-[8px] font-black uppercase flex items-center gap-1 shadow-sm",
-                        c.is_paid ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-rose-50 text-rose-600 border border-rose-100"
-                      )}>
-                         {c.is_paid ? <CheckCircle className="w-2.5 h-2.5" /> : <AlertTriangle className="w-2.5 h-2.5" />}
-                         {c.is_paid ? 'LUNAS' : 'TUNGGAKAN'}
-                      </div>
-                      <div className="px-3 py-1 bg-indigo-50 text-indigo-600 text-[8px] font-black uppercase rounded-full border border-indigo-100 shadow-sm">
+                      {(() => {
+                        const unpaid = getUnpaidMonthsList(c);
+                        const hasPastUnpaid = unpaid.some(p => p <= currentMonthStr);
+                        let statusText = 'LUNAS';
+                        let statusColor = 'bg-emerald-50 text-emerald-600 border border-emerald-100';
+                        
+                        if (unpaid.length === 0) {
+                          statusText = 'LUNAS TOTAL';
+                        } else if (hasPastUnpaid) {
+                          statusText = 'MENUNGGAK';
+                          statusColor = 'bg-rose-50 text-rose-600 border border-rose-100';
+                        } else {
+                          statusText = 'LUNAS BLN INI';
+                          statusColor = 'bg-indigo-50 text-indigo-600 border border-indigo-100';
+                        }
+
+                        return (
+                          <div className={cn("px-3 py-1 rounded-full text-[8px] font-black uppercase flex items-center gap-1 shadow-sm", statusColor)}>
+                            {statusText === 'MENUNGGAK' ? <AlertTriangle className="w-2.5 h-2.5" /> : <CheckCircle className="w-2.5 h-2.5" />}
+                            {statusText}
+                          </div>
+                        );
+                      })()}
+                      <div className="px-3 py-1 bg-slate-50 text-slate-500 text-[8px] font-black uppercase rounded-full border border-slate-100 shadow-sm">
                          {c.packet.split(' - ')[0]}
                       </div>
                    </div>
