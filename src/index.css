@@ -30,10 +30,10 @@
   body * {
     visibility: hidden;
   }
-  .print-container, .print-container * {
+  .print-container, .print-container *, #recap-print-area, #recap-print-area * {
     visibility: visible;
   }
-  .print-container {
+  .print-container, #recap-print-area {
     position: absolute;
     left: 0;
     top: 0;

@@ -1228,6 +1228,7 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
   const [showPrinterSettings, setShowPrinterSettings] = useState(false);
   const [historyTab, setHistoryTab] = useState<'transaksi' | 'rekap'>('transaksi');
   const [depositStats, setDepositStats] = useState({ heldAmount: 0, pendingConfirmation: 0, confirmedAmount: 0, pendingCount: 0 });
+  const [recapToPreview, setRecapToPreview] = useState<Transaction[] | null>(null);
 
   const printTransaction = async (id: number) => {
     try {
@@ -1422,8 +1423,11 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
 
   const handleDeposit = async () => {
     if (heldBalance === 0) return alert('Tidak ada uang yang perlu disetor.');
-    if (!confirm(`Setor uang Rp ${heldBalance.toLocaleString()} ke Admin?`)) return;
-    
+    const pendingTrans = transactions.filter(t => t.status === 'pending' && t.type === 'pemasukan');
+    setRecapToPreview(pendingTrans);
+  };
+
+  const confirmDepositSubmission = async () => {
     try {
       const res = await fetch('/api/deposits/submit', {
         method: 'POST',
@@ -1431,8 +1435,9 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
       });
       
       if (res.ok) {
+        setRefreshTrigger(prev => prev + 1);
+        setRecapToPreview(null);
         alert('Berhasil! Segera serahkan uang fisik ke Admin.');
-        fetchInitialData();
       } else {
         const errorData = await res.json();
         alert(errorData.error || 'Gagal mengirim setoran.');
@@ -1611,7 +1616,88 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
                </button>
             </motion.div>
           )}
-        </AnimatePresence>
+      </AnimatePresence>
+
+
+      <AnimatePresence>
+        {recapToPreview && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setRecapToPreview(null)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+            >
+              <div className="p-8 border-b border-slate-100 flex items-center justify-between shrink-0">
+                 <div>
+                    <h3 className="text-xl font-black text-slate-900 tracking-tight">Cek Rekap Setoran</h3>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Daftar transaksi yang akan disetor</p>
+                 </div>
+                 <button onClick={() => setRecapToPreview(null)} className="p-3 bg-slate-50 text-slate-400 rounded-2xl">
+                    <X className="w-5 h-5" />
+                 </button>
+              </div>
+
+              <div id="recap-print-area" className="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar bg-slate-50/30">
+                 <div className="bg-white rounded-[2rem] border border-slate-100 p-6 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+                       <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white">
+                             <History className="w-5 h-5" />
+                          </div>
+                          <div>
+                             <p className="text-[10px] font-black text-slate-400 uppercase">Rekap Tanggal</p>
+                             <p className="text-xs font-bold text-slate-900">{new Date().toLocaleDateString('id-ID', { dateStyle: 'long' })}</p>
+                        </div>
+                       </div>
+                       <div className="text-right">
+                          <p className="text-[10px] font-black text-slate-400 uppercase">Total Uang</p>
+                          <p className="text-lg font-black text-indigo-600">Rp {recapToPreview.reduce((sum, t) => sum + t.amount, 0).toLocaleString()}</p>
+                       </div>
+                    </div>
+
+                    <div className="space-y-3">
+                       {recapToPreview.map((t, idx) => (
+                          <div key={t.id} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
+                             <div className="flex items-center gap-3">
+                                <span className="text-[10px] font-black text-slate-300 w-4">{idx + 1}.</span>
+                                <div>
+                                   <p className="text-[11px] font-extrabold text-slate-800 leading-tight truncate max-w-[150px]">{t.customer_name || t.category}</p>
+                                   <p className="text-[8px] font-bold text-slate-400 uppercase">{t.billing_period ? formatPeriod(t.billing_period.split(',')[0].trim()) : t.category}</p>
+                                </div>
+                             </div>
+                             <p className="text-[11px] font-black text-slate-700 tabular-nums">Rp {t.amount.toLocaleString()}</p>
+                          </div>
+                       ))}
+                    </div>
+                 </div>
+              </div>
+
+              <div className="p-8 border-t border-slate-100 bg-white grid grid-cols-2 gap-4 shrink-0">
+                 <button 
+                   onClick={() => window.print()}
+                   className="flex items-center justify-center gap-2 py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all"
+                 >
+                   <Printer className="w-4 h-4" /> Cetak Rekap
+                 </button>
+                 <button 
+                   onClick={confirmDepositSubmission}
+                   className="flex items-center justify-center gap-2 py-4 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-indigo-100"
+                 >
+                   <ShieldCheck className="w-4 h-4" /> Setor Sekarang
+                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
 
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-10 pb-8 border-b border-slate-200/50">
