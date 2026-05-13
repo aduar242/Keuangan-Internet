@@ -82,8 +82,8 @@ function FormattedNumberInput({ value, onChange, placeholder, className, require
 }
 
 const CATEGORIES = {
-  pemasukan: ['Tagihan Bulanan', 'Voucher', 'Pemasangan Baru', 'Denda', 'Lainnya'],
-  pengeluaran: ['ISP Pusat', 'Alat', 'Operasional', 'Gaji', 'Sewa Tempat', 'Lainnya']
+  pemasukan: ['Setoran Tagihan Bulanan', 'Registrasi Pelanggan Baru', 'Biaya Maintenance', 'Penjualan Perangkat', 'Lain-lain'],
+  pengeluaran: ['Biaya Bandwidth / Backbone', 'Pembelian Alat & Peralatan', 'Operasional & Listrik', 'Gaji Karyawan', 'Lain-lain']
 };
 
 const getBillingPeriods = () => {
@@ -329,6 +329,8 @@ export default function App() {
                       deferredPrompt={deferredPrompt} 
                       onInstall={handleInstallClick} 
                       refreshTrigger={refreshTrigger}
+                      printerStatus={printerStatus}
+                      onCheckPrinter={checkPrinter}
                     />
                   )}
                   {activeTab === 'history' && <AdminDashboard user={user} settings={settings} refreshTrigger={refreshTrigger} setRefreshTrigger={setRefreshTrigger} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
@@ -436,30 +438,6 @@ function DesktopSidebar({ user, settings, activeTab, setActiveTab, printerStatus
       </nav>
 
       <div className="p-4 space-y-4">
-        <div className="bg-slate-50 border border-slate-100 rounded-3xl p-5">
-          <div className="flex items-center gap-3 mb-4">
-            <div className={cn(
-              "w-10 h-10 rounded-2xl flex items-center justify-center shadow-inner transition-colors",
-              printerStatus === 'ready' ? "bg-emerald-100 text-emerald-600" : "bg-rose-100 text-rose-600"
-            )}>
-              <Printer className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-none">Status Printer</p>
-              <p className={cn("text-[11px] font-bold leading-none truncate", printerStatus === 'ready' ? "text-emerald-600" : "text-rose-600")}>
-                {printerStatus === 'ready' ? 'SIAP MENCETAK' : 'DISCONNECTED'}
-              </p>
-            </div>
-          </div>
-          <button 
-            onClick={checkPrinter}
-            className="w-full py-2.5 bg-white border border-slate-200 text-slate-500 text-[10px] font-black rounded-xl hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
-          >
-            <RefreshCw className={cn("w-3 h-3", printerStatus === 'checking' && "animate-spin")} />
-            REFRESH
-          </button>
-        </div>
-
         <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-[2rem]">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-indigo-600 font-black text-sm uppercase ring-2 ring-white shadow-sm flex-shrink-0">
@@ -501,13 +479,6 @@ function MobileHeader({ user, settings, printerStatus, checkPrinter, handleLogou
               {user.role}
             </div>
             <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-            <button 
-              onClick={checkPrinter}
-              className="flex items-center gap-1 active:scale-95 transition-transform"
-            >
-              <div className={cn("w-1.5 h-1.5 rounded-full", printerStatus === 'ready' ? "bg-emerald-500 animate-pulse" : "bg-rose-500")}></div>
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">PRINTER {printerStatus === 'ready' ? 'READY' : 'OFF'}</span>
-            </button>
           </div>
         </div>
       </div>
@@ -521,7 +492,7 @@ function MobileHeader({ user, settings, printerStatus, checkPrinter, handleLogou
   );
 }
 
-function SidebarLink({ icon, label, onClick, active = false }: { icon: React.ReactNode, label: string, onClick?: () => void, active?: boolean }) {
+function SidebarLink({ icon, label, onClick, active = false }: { icon: React.ReactNode, label: string, onClick?: () => void, active?: boolean, key?: string }) {
   return (
     <button onClick={onClick} className={cn(
       "w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[13px] font-bold transition-all text-left relative group",
@@ -552,10 +523,10 @@ function MobileNav({ activeTab, setActiveTab, user, onOpenMenu }: { activeTab: s
       <MobileNavItem active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home className="w-6 h-6" />} label="Home" />
       <MobileNavItem active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} icon={<UsersIcon className="w-6 h-6" />} label="Data" />
       
-      <div className="relative -mt-14 group">
+      <div className="relative -mt-10 group">
         <button 
           onClick={onOpenMenu}
-          className="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-2xl shadow-indigo-200 hover:scale-110 active:scale-95 transition-all ring-8 ring-slate-50 relative overflow-hidden"
+          className="w-14 h-14 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-2xl shadow-indigo-200 hover:scale-110 active:scale-95 transition-all ring-6 ring-slate-50 relative overflow-hidden"
         >
           <div className="absolute inset-0 bg-gradient-to-tr from-white/0 to-white/20 animate-pulse" />
           <div className="flex flex-col gap-0.5 items-center justify-center relative z-10">
@@ -601,13 +572,13 @@ function MobileMenuDrawer({ user, activeTab, setActiveTab, onClose }: { user: Us
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-        className="relative bg-white w-full max-w-lg rounded-t-[3.5rem] shadow-2xl overflow-hidden pb-10 flex flex-col max-h-[92vh]"
+        className="relative bg-white w-full max-w-lg rounded-t-[3.5rem] shadow-2xl overflow-hidden pb-10 flex flex-col max-h-[85dvh] sm:max-h-[92vh]"
       >
-        <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mt-6 mb-2" />
+        <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mt-4 mb-1" />
         
-        <div className="px-8 pt-6 pb-6 bg-white shrink-0">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-slate-900 rounded-3xl flex items-center justify-center text-white text-2xl font-black shadow-2xl relative overflow-hidden">
+        <div className="px-6 pt-4 pb-4 bg-white shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white text-xl font-black shadow-lg relative overflow-hidden">
                <div className="absolute inset-0 bg-indigo-600 opacity-20" />
                {user.name.charAt(0)}
             </div>
@@ -621,9 +592,9 @@ function MobileMenuDrawer({ user, activeTab, setActiveTab, onClose }: { user: Us
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4 custom-scrollbar">
-          <p className="px-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Navigasi Modul</p>
-          <div className="grid grid-cols-2 gap-3 pb-8">
+        <div className="flex-1 overflow-y-auto px-4 py-2 custom-scrollbar">
+          <p className="px-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Navigasi Modul</p>
+          <div className="grid grid-cols-2 gap-2 pb-6">
             {menuItems.map((item, idx) => (
               <motion.button
                 key={item.id}
@@ -632,17 +603,17 @@ function MobileMenuDrawer({ user, activeTab, setActiveTab, onClose }: { user: Us
                 transition={{ delay: idx * 0.04 }}
                 onClick={() => setActiveTab(item.id)}
                 className={cn(
-                  "flex flex-col items-start p-5 rounded-[2.5rem] transition-all border text-left active:scale-95 group relative overflow-hidden",
+                  "flex flex-col items-start p-4 rounded-[2rem] transition-all border text-left active:scale-95 group relative overflow-hidden",
                   activeTab === item.id 
                     ? "bg-indigo-600 border-indigo-600 shadow-xl shadow-indigo-100" 
                     : "bg-slate-50 border-slate-100"
                 )}
               >
                 <div className={cn(
-                  "p-3 rounded-2xl mb-4 shadow-sm",
+                  "p-2.5 rounded-xl mb-3 shadow-sm",
                   activeTab === item.id ? "bg-white/20 text-white" : "bg-white text-slate-400"
                 )}>
-                  {React.cloneElement(item.icon as React.ReactElement, { className: "w-6 h-6" })}
+                  {React.cloneElement(item.icon as React.ReactElement, { className: "w-5 h-5" })}
                 </div>
                 <span className={cn(
                   "text-xs font-black uppercase tracking-tight",
@@ -677,16 +648,16 @@ function MobileMenuDrawer({ user, activeTab, setActiveTab, onClose }: { user: Us
 function MobileNavItem({ active, onClick, icon, label }: { active: boolean, onClick: () => void, icon: React.ReactNode, label?: string }) {
   return (
     <button onClick={onClick} className={cn(
-      "flex flex-col items-center justify-center p-2 rounded-2xl transition-all duration-300 relative min-w-[70px]",
-      active ? "text-indigo-600 scale-110" : "text-slate-400"
+      "flex flex-col items-center justify-center p-1 rounded-2xl transition-all duration-300 relative min-w-[60px]",
+      active ? "text-indigo-600 scale-105" : "text-slate-400"
     )}>
       <div className={cn(
-        "p-2 rounded-2xl transition-all",
+        "p-1.5 rounded-xl transition-all",
         active ? "bg-indigo-50" : ""
       )}>
-        {icon}
+        {React.cloneElement(icon as React.ReactElement, { className: "w-5 h-5" })}
       </div>
-      {label && <span className={cn("text-[10px] font-black uppercase tracking-widest mt-1", active ? "text-indigo-600" : "text-slate-400")}>{label}</span>}
+      {label && <span className={cn("text-[9px] font-black uppercase tracking-tight mt-1", active ? "text-indigo-600" : "text-slate-400")}>{label}</span>}
       {active && (
         <motion.div 
           layoutId="mobile-nav-indicator"
@@ -949,10 +920,9 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
       </header>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <StatCard title="Saldo Kas Saat Ini" amount={stats?.balance || 0} icon={<Wallet className="w-6 h-6 text-indigo-600" />} color="indigo" settings={settings} />
         <StatCard title="Total Pemasukan" amount={stats?.totalIncome || 0} icon={<ArrowUpCircle className="w-6 h-6 text-emerald-600" />} color="emerald" settings={settings} />
-        <StatCard title="Uang Masuk Petugas" amount={stats?.pendingAmount || 0} icon={<Coins className="w-6 h-6 text-amber-600" />} color="amber" settings={settings} />
         <StatCard title="Total Pengeluaran" amount={stats?.totalExpense || 0} icon={<ArrowDownCircle className="w-6 h-6 text-rose-600" />} color="rose" settings={settings} />
       </div>
 
@@ -1205,7 +1175,7 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
   const [packets, setPackets] = useState<Packet[]>([]);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('Tagihan Bulanan');
+  const [selectedCategory, setSelectedCategory] = useState<string>('Setoran Tagihan Bulanan');
   const [searchTerm, setSearchTerm] = useState('');
   const [showCustomerList, setShowCustomerList] = useState(false);
   const [customerPayments, setCustomerPayments] = useState<any[]>([]);
@@ -1318,7 +1288,7 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
         }
 
         // Auto-set amount for Monthly Billing
-        if (selectedCategory === 'Tagihan Bulanan') {
+        if (selectedCategory === 'Setoran Tagihan Bulanan') {
           const priceMatch = customer.packet.match(/Rp\s?([\d.,]+)/);
           if (priceMatch) {
             const numericPrice = priceMatch[1].replace(/[.,]/g, '');
@@ -1342,7 +1312,7 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
 
   // Handle category changes to re-sync price
   useEffect(() => {
-    if (selectedCustomerId && selectedCategory === 'Tagihan Bulanan') {
+    if (selectedCustomerId && selectedCategory === 'Setoran Tagihan Bulanan') {
       const customer = customers.find(c => String(c.id) === selectedCustomerId);
       if (customer) {
         const priceMatch = customer.packet.match(/Rp\s?([\d.,]+)/);
@@ -1437,7 +1407,7 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
     e.preventDefault();
     if (loading) return;
 
-    if (selectedPeriods.length === 0 && selectedCategory === 'Tagihan Bulanan') {
+    if (selectedPeriods.length === 0 && selectedCategory === 'Setoran Tagihan Bulanan') {
       alert('Pilih setidaknya satu bulan tagihan.');
       return;
     }
@@ -1445,17 +1415,17 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
     setLoading(true);
     
     try {
-      const periodsToPay = selectedCategory === 'Tagihan Bulanan' ? selectedPeriods : [new Date().toISOString().slice(0, 7)];
+      const periodsToPay = selectedCategory === 'Setoran Tagihan Bulanan' ? selectedPeriods : [new Date().toISOString().slice(0, 7)];
       
       // To unify the report, we send ONE transaction with comma-separated periods
       const data = {
         type: 'pemasukan',
         category: selectedCategory,
         amount: totalAmount, // Use the total amount for all periods
-        description: selectedCategory === 'Tagihan Bulanan' 
+        description: selectedCategory === 'Setoran Tagihan Bulanan' 
           ? `Internet ${periodsToPay.map(p => formatPeriod(p).split(' ')[0]).join(', ')}` 
           : (e.currentTarget.description as any).value,
-        billing_period: selectedCategory === 'Tagihan Bulanan' ? periodsToPay.join(',') : null,
+        billing_period: selectedCategory === 'Setoran Tagihan Bulanan' ? periodsToPay.join(',') : null,
         transaction_date: new Date().toISOString().split('T')[0],
         customer_id: selectedCustomerId ? Number(selectedCustomerId) : null
       };
@@ -1544,64 +1514,7 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
                  <Coins className="w-5 h-5" /> KONFIRMASI SETORAN
                </button>
             </div>
-           
-           <div className="grid grid-cols-2 gap-4">
-             {/* Printer Card */}
-             <div 
-               onClick={() => setShowPrinterSettings(!showPrinterSettings)}
-               className={cn(
-                 "p-5 rounded-[2rem] border transition-all active:scale-95 cursor-pointer flex flex-col justify-between",
-                 showPrinterSettings ? "bg-slate-900 border-slate-900 shadow-xl" : "bg-white border-slate-100 shadow-sm"
-               )}
-             >
-                <div className={cn(
-                  "w-10 h-10 rounded-xl flex items-center justify-center mb-3",
-                  showPrinterSettings ? "bg-white/10 text-white" : "bg-indigo-50 text-indigo-600"
-                )}>
-                   <Printer className="w-5 h-5" />
-                </div>
-                <div>
-                   <p className={cn("text-[8px] font-black uppercase tracking-widest leading-none mb-1", showPrinterSettings ? "text-slate-500" : "text-slate-400")}>Printer</p>
-                   <p className={cn("text-xs font-black", showPrinterSettings ? "text-white" : "text-slate-800")}>Thermal</p>
-                </div>
-             </div>
-             {/* Info Card */}
-             <div className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col justify-between">
-                <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-3">
-                   <Target className="w-5 h-5" />
-                </div>
-                <div>
-                   <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Target</p>
-                   <p className="text-xs font-black text-emerald-600">Terbaik</p>
-                </div>
-             </div>
-           </div>
-        </div>
-
-        {/* Printer Settings Overlay (Mobile Only) */}
-        <AnimatePresence>
-          {showPrinterSettings && (
-            <motion.div 
-               initial={{ opacity: 0 }}
-               animate={{ opacity: 1 }}
-               exit={{ opacity: 0 }}
-               transition={{ duration: 0.2 }}
-               className="bg-indigo-600 rounded-3xl p-5 overflow-hidden"
-            >
-               <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-white font-black text-xs uppercase tracking-widest">Printer Thermal</h4>
-                  <div className="px-3 py-1 bg-white/20 rounded-full text-[8px] font-black text-white uppercase">Bluetooth Mode</div>
-               </div>
-               <p className="text-white/70 text-[10px] leading-relaxed mb-4">Pastikan printer thermal 58mm/80mm Anda sudah terkoneksi dengan HP melalui Bluetooth. Sistem akan otomatis memanggil aplikasi printer thermal saat mencetak.</p>
-               <button 
-                  onClick={() => window.print()}
-                  className="w-full bg-white text-indigo-600 py-3 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2"
-               >
-                  <Wifi className="w-4 h-4" /> Tes Cetak Sekarang
-               </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+         </div>
 
 
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-10 pb-8 border-b border-slate-200/50">
@@ -1730,7 +1643,7 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
             <div className="space-y-4">
               <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.1em] px-1">Pilih Keterangan Setoran</label>
               <div className="grid grid-cols-2 gap-3">
-                {['Tagihan Bulanan', 'Pemasangan Baru', 'Denda', 'Voucher', 'Lain-lain'].map((cat) => (
+                {['Setoran Tagihan Bulanan', 'Registrasi Pelanggan Baru', 'Biaya Maintenance', 'Penjualan Perangkat', 'Lain-lain'].map((cat) => (
                   <button
                     key={cat}
                     type="button"
@@ -1749,7 +1662,7 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
             </div>
           </div>
 
-          {selectedCategory === 'Tagihan Bulanan' && unpaidMonthsList.length > 0 ? (
+          {selectedCategory === 'Setoran Tagihan Bulanan' && unpaidMonthsList.length > 0 ? (
             <motion.div 
                initial={{ opacity: 0 }}
                animate={{ opacity: 1 }}
@@ -1776,7 +1689,7 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
                 ))}
               </div>
             </motion.div>
-          ) : selectedCategory === 'Tagihan Bulanan' && selectedCustomerId ? (
+          ) : selectedCategory === 'Setoran Tagihan Bulanan' && selectedCustomerId ? (
             <div className="bg-emerald-50 border-2 border-emerald-100 p-6 rounded-3xl flex items-center justify-center gap-3">
               <CheckCircle className="w-5 h-5 text-emerald-600" />
               <span className="text-xs font-black text-emerald-800 uppercase tracking-widest">Semua Tagihan Sudah Lunas</span>
@@ -1796,7 +1709,7 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
                 )}>
                   Rp {totalAmount.toLocaleString()}
                 </p>
-                {selectedCategory === 'Tagihan Bulanan' && selectedPeriods.length > 0 && (
+                {selectedCategory === 'Setoran Tagihan Bulanan' && selectedPeriods.length > 0 && (
                    <div className="bg-white/5 py-2 px-4 rounded-full inline-flex items-center gap-2">
                      <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">Pembayaran untuk</span>
                      <span className="text-[9px] font-black text-emerald-400 uppercase">{selectedPeriods.length} BULAN</span>
@@ -1807,7 +1720,7 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
 
           <button 
             type="submit" 
-            disabled={loading || !selectedCustomerId || (selectedCategory === 'Tagihan Bulanan' && selectedPeriods.length === 0)}
+            disabled={loading || !selectedCustomerId || (selectedCategory === 'Setoran Tagihan Bulanan' && selectedPeriods.length === 0)}
             className="w-full bg-indigo-600 hover:bg-black text-white py-8 rounded-[3rem] font-black text-xl uppercase tracking-[0.2em] shadow-lg transition-all active:scale-95 disabled:opacity-30 flex flex-col items-center justify-center gap-1 group"
           >
             <div className="flex items-center gap-3">
@@ -2139,8 +2052,8 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
                       <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Kategori</label>
                         <select name="p_category" className="w-full bg-white border-none h-12 px-4 rounded-xl font-bold text-slate-700 outline-none">
-                          <option value="Pemasangan Baru">Pemasangan Baru</option>
-                          <option value="Tagihan Bulanan">Tagihan Bulanan</option>
+                          <option value="Registrasi Pelanggan Baru">Registrasi Pelanggan Baru</option>
+                          <option value="Setoran Tagihan Bulanan">Setoran Tagihan Bulanan</option>
                         </select>
                       </div>
                       <div className="space-y-2">
@@ -2816,7 +2729,21 @@ function PacketManagement({ user, refreshTrigger }: { user: User, refreshTrigger
   );
 }
 
-function SettingsManagement({ user, deferredPrompt, onInstall, refreshTrigger }: { user: User, deferredPrompt?: any, onInstall?: () => void, refreshTrigger?: number }) {
+function SettingsManagement({ 
+  user, 
+  deferredPrompt, 
+  onInstall, 
+  refreshTrigger, 
+  printerStatus, 
+  onCheckPrinter 
+}: { 
+  user: User, 
+  deferredPrompt?: any, 
+  onInstall?: () => void, 
+  refreshTrigger?: number,
+  printerStatus: 'not_connected' | 'checking' | 'ready',
+  onCheckPrinter: () => void
+}) {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -2978,49 +2905,49 @@ function SettingsManagement({ user, deferredPrompt, onInstall, refreshTrigger }:
       <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
         <div className="p-8 space-y-6">
           <h3 className="font-black text-slate-800 uppercase tracking-widest text-xs flex items-center gap-2">
-            <Printer className="w-4 h-4 text-amber-500" /> Thermal Printer Integration
+            <Printer className="w-4 h-4 text-indigo-500" /> Pengaturan Perangkat Thermal
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Connection Status</p>
+            <div className={cn(
+              "p-6 rounded-2xl border transition-all duration-500",
+              printerStatus === 'ready' ? "bg-emerald-50 border-emerald-100" : "bg-rose-50 border-rose-100"
+            )}>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Status Koneksi</p>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center">
-                  <WifiOff className="w-5 h-5" />
+                <div className={cn(
+                  "w-10 h-10 rounded-xl flex items-center justify-center transition-colors shadow-sm",
+                  printerStatus === 'ready' ? "bg-emerald-500 text-white" : "bg-rose-500 text-white"
+                )}>
+                  <Printer className={cn("w-5 h-5", printerStatus === 'checking' && "animate-spin")} />
                 </div>
                 <div>
-                   <p className="text-sm font-bold text-slate-700">Printer Disconnected</p>
-                   <p className="text-[10px] text-slate-400 font-medium">Buka menu browser pada HP dan pilih 'Print' atau 'Share to Printer' untuk mencoba koneksi.</p>
+                   <p className="text-sm font-black text-slate-800 uppercase tracking-tight">
+                     {printerStatus === 'ready' ? 'Printer Connected' : printerStatus === 'checking' ? 'Checking...' : 'Printer Offline'}
+                   </p>
+                   <p className="text-[10px] text-slate-400 font-medium">ESC/POS 58mm / 80mm Support</p>
                 </div>
               </div>
             </div>
             <div className="flex flex-col justify-center gap-3">
               <button 
-                onClick={() => window.print()}
-                className="bg-white border-2 border-slate-200 text-slate-600 font-black py-4 rounded-2xl hover:bg-slate-50 transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-widest"
+                onClick={onCheckPrinter}
+                className="bg-slate-900 hover:bg-black text-white font-black py-4 rounded-2xl transition-all flex items-center justify-center gap-3 text-xs uppercase tracking-widest shadow-xl shadow-slate-200 active:scale-95"
               >
-                <Printer className="w-4 h-4" /> Test Direct Print
+                <RefreshCw className={cn("w-4 h-4", printerStatus === 'checking' && "animate-spin")} />
+                Cek Koneksi Printer
               </button>
-              <p className="text-center text-[9px] text-slate-400 font-bold uppercase tracking-widest leading-loose">
-                Supports: 58mm / 80mm ESC/POS Thermal Printers<br/>
-                Via Bluetooth / USB / Network
-              </p>
+              <button 
+                onClick={() => window.print()}
+                className="bg-white border-2 border-slate-100 text-slate-400 font-black py-2 rounded-xl hover:bg-slate-50 transition-all text-[9px] uppercase tracking-[0.25em]"
+              >
+                Print Test Page
+              </button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-amber-50 border border-amber-100 rounded-3xl p-6 flex flex-col md:flex-row items-center gap-6">
-        <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-amber-500 shadow-sm border border-amber-100 flex-shrink-0">
-           <Printer className="w-10 h-10" />
-        </div>
-        <div className="flex-1">
-          <h4 className="font-bold text-amber-900 leading-tight">Uji Coba Cetak</h4>
-          <p className="text-amber-800/60 text-sm mt-1">Pastikan printer thermal Anda terhubung sebelum melakukan pengaturan lebih lanjut.</p>
-        </div>
-        <button className="bg-white border border-amber-200 text-amber-600 font-bold px-6 py-3 rounded-xl hover:bg-amber-100 transition-all uppercase tracking-widest text-[10px]">
-           Tes Print Halaman
-        </button>
-      </div>
+
 
       {deferredPrompt && (
         <div className="bg-gradient-to-br from-indigo-700 to-slate-900 rounded-[2.5rem] p-8 shadow-2xl shadow-indigo-200/50 border border-indigo-400/20 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
@@ -3305,7 +3232,7 @@ function TransactionModal({ user, isAdmin, onClose, onSuccess }: { user: User, i
         category: formData.get('category'),
         amount: Number(formData.get('amount')),
         description: formData.get('description'),
-        billing_period: (formData.get('category') === 'Tagihan Bulanan' || formData.get('billing_period')) ? formData.get('billing_period') : null,
+        billing_period: (formData.get('category') === 'Setoran Tagihan Bulanan' || formData.get('billing_period')) ? formData.get('billing_period') : null,
         transaction_date: formData.get('transaction_date')
       };
 
