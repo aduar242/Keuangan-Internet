@@ -374,88 +374,109 @@ export default function App() {
 }
 
 function DesktopSidebar({ user, settings, activeTab, setActiveTab, printerStatus, checkPrinter, handleLogout, deferredPrompt, handleInstallClick }: { user: User, settings: AppSettings | null, activeTab: string, setActiveTab: (t: string) => void, printerStatus: string, checkPrinter: () => void, handleLogout: () => void, deferredPrompt: any, handleInstallClick: () => void }) {
+  const menuItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-[18px] h-[18px]" /> },
+    { id: 'customers', label: 'Pelanggan', icon: <UsersIcon className="w-[18px] h-[18px]" /> },
+  ];
+
+  const adminItems = [
+    { id: 'packets', label: 'Paket Layanan', icon: <BarChart3 className="w-[18px] h-[18px]" /> },
+    { id: 'users', label: 'Data Petugas', icon: <Users2 className="w-[18px] h-[18px]" /> },
+    { id: 'reports', label: 'Laporan', icon: <CalendarCheck2 className="w-[18px] h-[18px]" /> },
+    { id: 'settings', label: 'Pengaturan', icon: <Settings className="w-[18px] h-[18px]" /> },
+  ];
+
   return (
-    <aside className="hidden md:flex w-72 bg-slate-900 border-r border-slate-800 flex-col p-8 space-y-8 h-screen sticky top-0 overflow-y-auto">
-      <div className="flex items-center gap-4 text-white">
-        <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-indigo-500/40 rotate-3 group-hover:rotate-0 transition-transform">
-          <Coins className="w-7 h-7" />
-        </div>
-        <div className="min-w-0">
-          <h1 className="font-black text-xl leading-none uppercase tracking-tighter truncate">{settings?.company_name || 'RT/RW NET'}</h1>
-          <p className="text-[10px] text-slate-500 font-black mt-1 uppercase tracking-widest">Finance Portal v2.0</p>
-        </div>
-      </div>
-
-      <nav className="flex-1 space-y-2">
-        <SidebarLink active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<LayoutDashboard className="w-5 h-5" />} label="Dashboard" />
-        <SidebarLink active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} icon={<UsersIcon className="w-5 h-5" />} label="Pelanggan" />
-        {user.role === 'admin' && (
-          <div className="pt-6 space-y-1">
-            <p className="px-3 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-3">Manajemen</p>
-            <SidebarLink active={activeTab === 'packets'} onClick={() => setActiveTab('packets')} icon={<BarChart3 className="w-5 h-5" />} label="Paket Layanan" />
-            <SidebarLink active={activeTab === 'users'} onClick={() => setActiveTab('users')} icon={<Users2 className="w-5 h-5" />} label="Data Petugas" />
-            <SidebarLink active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} icon={<CalendarCheck2 className="w-5 h-5" />} label="Laporan Pembayaran" />
-            <SidebarLink active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings className="w-5 h-5" />} label="Pengaturan Sistem" />
-          </div>
-        )}
-        <div className="pt-6">
-          <SidebarLink active={activeTab === 'history'} onClick={() => setActiveTab('history')} icon={<History className="w-5 h-5" />} label="Riwayat Transaksi" />
-        </div>
-      </nav>
-
-      {deferredPrompt && (
-        <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-3xl p-5 shadow-2xl shadow-indigo-900/20 border border-indigo-500/30">
-          <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-1">Aplikasi Web</p>
-          <p className="text-sm font-black text-white mb-4 leading-tight">Install ke desktop untuk akses lebih cepat</p>
-          <button 
-            onClick={handleInstallClick}
-            className="w-full py-3 bg-white text-indigo-600 font-black text-[10px] rounded-xl shadow-lg active:scale-95 transition-all uppercase tracking-[0.1em]"
-          >
-            PASANG SEKARANG
-          </button>
-        </div>
-      )}
-
-      <div className="bg-slate-800/40 rounded-3xl p-5 border border-slate-700/30">
-        <div className="flex items-center gap-4 mb-4">
-          <div className={cn(
-            "w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-inner",
-            printerStatus === 'ready' ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"
-          )}>
-            <Printer className="w-5 h-5" />
-          </div>
-          <div>
-            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">Printer Status</p>
-            <p className={cn("text-xs font-bold leading-none", printerStatus === 'ready' ? "text-emerald-400" : "text-rose-400")}>
-              {printerStatus === 'ready' ? 'READY' : (printerStatus === 'checking' ? 'CHECKING...' : 'OFFLINE')}
-            </p>
-          </div>
-        </div>
-        <button 
-          onClick={checkPrinter}
-          className="w-full py-2.5 bg-slate-700/30 hover:bg-slate-700 text-slate-400 text-[10px] font-black rounded-xl transition-all flex items-center justify-center gap-2 border border-slate-600/30"
-        >
-          <RefreshCw className={cn("w-3 h-3", printerStatus === 'checking' && "animate-spin")} />
-          CEK KONEKSI
-        </button>
-      </div>
-
-      <div className="pt-6 border-t border-slate-800 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3 overflow-hidden">
-          <div className="w-10 h-10 rounded-2xl bg-indigo-600/20 flex items-center justify-center text-indigo-400 font-black flex-shrink-0">
-            {user.name.charAt(0)}
+    <aside className="hidden md:flex w-[280px] bg-white border-r border-slate-200/60 flex-col h-screen sticky top-0 z-30">
+      <div className="p-8 mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-100 rotate-2">
+            <Coins className="w-6 h-6 text-white" />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-black text-white truncate">{user.name}</p>
-            <p className="text-[10px] text-slate-500 uppercase font-bold">{user.role}</p>
+            <h1 className="font-extrabold text-lg leading-none tracking-tight truncate text-slate-900">
+              {settings?.company_name || 'BILLING SYSTEM'}
+            </h1>
+            <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-[0.2em] mt-1.5 leading-none">Management v2</p>
           </div>
         </div>
-        <button 
-          onClick={handleLogout}
-          className="p-3 bg-slate-800/50 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all active:scale-95 flex-shrink-0"
-        >
-          <LogOut className="w-5 h-5" />
-        </button>
+      </div>
+
+      <nav className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">
+        <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Main Menu</p>
+        <div className="space-y-1">
+          {menuItems.map(item => (
+            <SidebarLink 
+              key={item.id}
+              active={activeTab === item.id} 
+              onClick={() => setActiveTab(item.id)} 
+              icon={item.icon} 
+              label={item.label} 
+            />
+          ))}
+          <SidebarLink active={activeTab === 'history'} onClick={() => setActiveTab('history')} icon={<History className="w-[18px] h-[18px]" />} label="Riwayat" />
+        </div>
+
+        {user.role === 'admin' && (
+          <div className="pt-8">
+            <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Administrator</p>
+            <div className="space-y-1">
+              {adminItems.map(item => (
+                <SidebarLink 
+                  key={item.id}
+                  active={activeTab === item.id} 
+                  onClick={() => setActiveTab(item.id)} 
+                  icon={item.icon} 
+                  label={item.label} 
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </nav>
+
+      <div className="p-4 space-y-4">
+        <div className="bg-slate-50 border border-slate-100 rounded-3xl p-5">
+          <div className="flex items-center gap-3 mb-4">
+            <div className={cn(
+              "w-10 h-10 rounded-2xl flex items-center justify-center shadow-inner transition-colors",
+              printerStatus === 'ready' ? "bg-emerald-100 text-emerald-600" : "bg-rose-100 text-rose-600"
+            )}>
+              <Printer className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 leading-none">Status Printer</p>
+              <p className={cn("text-[11px] font-bold leading-none truncate", printerStatus === 'ready' ? "text-emerald-600" : "text-rose-600")}>
+                {printerStatus === 'ready' ? 'SIAP MENCETAK' : 'DISCONNECTED'}
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={checkPrinter}
+            className="w-full py-2.5 bg-white border border-slate-200 text-slate-500 text-[10px] font-black rounded-xl hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
+          >
+            <RefreshCw className={cn("w-3 h-3", printerStatus === 'checking' && "animate-spin")} />
+            REFRESH
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-[2rem]">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-indigo-600 font-black text-sm uppercase ring-2 ring-white shadow-sm flex-shrink-0">
+              {user.name.charAt(0)}
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-black text-slate-900 truncate leading-none">{user.name}</p>
+              <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 leading-none">{user.role}</p>
+            </div>
+          </div>
+          <button 
+            onClick={handleLogout}
+            className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-rose-500 transition-all active:scale-90 shadow-sm"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </aside>
   );
@@ -463,28 +484,35 @@ function DesktopSidebar({ user, settings, activeTab, setActiveTab, printerStatus
 
 function MobileHeader({ user, settings, printerStatus, checkPrinter, handleLogout }: { user: User, settings: AppSettings | null, printerStatus: string, checkPrinter: () => void, handleLogout: () => void }) {
   return (
-    <header className="md:hidden flex items-center justify-between px-6 pt-8 pb-4 bg-slate-50 sticky top-0 z-40">
-      <div className="flex items-center gap-3">
+    <header className="md:hidden flex items-center justify-between px-6 pt-10 pb-6 bg-slate-50/80 backdrop-blur-xl sticky top-0 z-40 border-b border-slate-200/50">
+      <div className="flex items-center gap-4">
         <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-100 rotate-2">
           <Coins className="w-7 h-7 text-white" />
         </div>
         <div>
-          <span className="block font-black text-slate-900 tracking-tight text-xl leading-none truncate max-w-[150px]">{settings?.company_name || 'RT/RW NET'}</span>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest leading-none">{user.role}</span>
+          <span className="block font-black text-slate-900 tracking-tight text-xl leading-none truncate max-w-[150px]">
+            {settings?.company_name || 'SYSTEM'}
+          </span>
+          <div className="flex items-center gap-2 mt-1.5">
+            <div className={cn(
+              "px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest",
+              user.role === 'admin' ? "bg-indigo-100 text-indigo-600" : "bg-emerald-100 text-emerald-600"
+            )}>
+              {user.role}
+            </div>
             <span className="w-1 h-1 rounded-full bg-slate-300"></span>
             <button 
               onClick={checkPrinter}
               className="flex items-center gap-1 active:scale-95 transition-transform"
             >
-              <div className={cn("w-1.5 h-1.5 rounded-full", printerStatus === 'ready' ? "bg-emerald-500" : "bg-rose-500")}></div>
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">PRINTER {printerStatus === 'ready' ? 'SIAP' : 'OFF'}</span>
+              <div className={cn("w-1.5 h-1.5 rounded-full", printerStatus === 'ready' ? "bg-emerald-500 animate-pulse" : "bg-rose-500")}></div>
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">PRINTER {printerStatus === 'ready' ? 'READY' : 'OFF'}</span>
             </button>
           </div>
         </div>
       </div>
       <button 
-        className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-slate-400 hover:text-rose-500 active:scale-90 transition-all border border-slate-100"
+        className="w-12 h-12 rounded-2xl bg-white shadow-xl shadow-slate-200/50 flex items-center justify-center text-slate-400 hover:text-rose-500 active:scale-90 transition-all border border-slate-100"
         onClick={handleLogout}
       >
         <LogOut className="w-5 h-5" />
@@ -496,34 +524,41 @@ function MobileHeader({ user, settings, printerStatus, checkPrinter, handleLogou
 function SidebarLink({ icon, label, onClick, active = false }: { icon: React.ReactNode, label: string, onClick?: () => void, active?: boolean }) {
   return (
     <button onClick={onClick} className={cn(
-      "w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-black transition-all text-left group",
+      "w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[13px] font-bold transition-all text-left relative group",
       active 
-        ? "bg-indigo-600 text-white shadow-xl shadow-indigo-200" 
-        : "text-slate-500 hover:bg-slate-800 hover:text-white"
+        ? "bg-indigo-50 text-indigo-600 shadow-sm" 
+        : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
     )}>
+      {active && (
+        <motion.div 
+          layoutId="sidebar-active"
+          className="absolute left-0 w-1.5 h-6 bg-indigo-600 rounded-full"
+        />
+      )}
       <div className={cn(
-        "transition-transform group-hover:scale-110 group-active:scale-90",
-        active ? "text-white" : "text-slate-400"
+        "transition-transform group-hover:scale-110",
+        active ? "text-indigo-600" : "text-slate-400 group-hover:text-slate-600"
       )}>
         {icon}
       </div>
-      <span className="truncate tracking-tight uppercase text-[11px]">{label}</span>
+      <span className="truncate tracking-tight">{label}</span>
     </button>
   );
 }
 
 function MobileNav({ activeTab, setActiveTab, user, onOpenMenu }: { activeTab: string, setActiveTab: (t: string) => void, user: User, onOpenMenu: () => void }) {
   return (
-    <nav className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-sm bg-white shadow-[0_20px_50px_rgba(0,0,0,0.2)] px-4 py-3 rounded-[2.5rem] flex items-center justify-between z-[100] border border-slate-200 ring-1 ring-black/5">
+    <nav className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-sm bg-white/90 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] px-4 py-3 rounded-[2.5rem] flex items-center justify-between z-[100] border border-white/50 ring-1 ring-black/5">
       <MobileNavItem active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home className="w-6 h-6" />} label="Home" />
-      <MobileNavItem active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} icon={<UsersIcon className="w-6 h-6" />} label="Pelanggan" />
+      <MobileNavItem active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} icon={<UsersIcon className="w-6 h-6" />} label="Data" />
       
-      <div className="relative -mt-12 group">
+      <div className="relative -mt-14 group">
         <button 
           onClick={onOpenMenu}
-          className="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-xl shadow-indigo-200 hover:scale-110 active:scale-95 transition-all ring-4 ring-white"
+          className="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-2xl shadow-indigo-200 hover:scale-110 active:scale-95 transition-all ring-8 ring-slate-50 relative overflow-hidden"
         >
-          <div className="flex flex-col gap-0.5 items-center justify-center">
+          <div className="absolute inset-0 bg-gradient-to-tr from-white/0 to-white/20 animate-pulse" />
+          <div className="flex flex-col gap-0.5 items-center justify-center relative z-10">
             <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
             <div className="flex gap-0.5">
               <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
@@ -541,14 +576,14 @@ function MobileNav({ activeTab, setActiveTab, user, onOpenMenu }: { activeTab: s
 
 function MobileMenuDrawer({ user, activeTab, setActiveTab, onClose }: { user: User, activeTab: string, setActiveTab: (t: string) => void, onClose: () => void }) {
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard />, description: 'Statistik & Ringkasan', color: 'bg-blue-500' },
-    { id: 'customers', label: 'Pelanggan', icon: <UsersIcon />, description: 'Kelola Database', color: 'bg-indigo-500' },
-    { id: 'history', label: 'Riwayat', icon: <History />, description: 'Transaksi Terakhir', color: 'bg-emerald-500' },
+    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard />, description: 'Statistik real-time' },
+    { id: 'customers', label: 'Pelanggan', icon: <UsersIcon />, description: 'Database & Profil' },
+    { id: 'history', label: 'Riwayat', icon: <History />, description: 'Track transaksi' },
     ...(user.role === 'admin' ? [
-      { id: 'packets', label: 'Paket', icon: <BarChart3 />, description: 'Atur Layanan', color: 'bg-amber-500' },
-      { id: 'users', label: 'Petugas', icon: <Users2 />, description: 'Tim Penagihan', color: 'bg-orange-500' },
-      { id: 'reports', label: 'Laporan', icon: <CalendarCheck2 />, description: 'Rekap Tahunan', color: 'bg-rose-500' },
-      { id: 'settings', label: 'Setelan', icon: <Settings />, description: 'Konfigurasi App', color: 'bg-slate-700' },
+      { id: 'packets', label: 'Paket', icon: <LayoutDashboard />, description: 'Atur layanan ISP' },
+      { id: 'users', label: 'Petugas', icon: <Users2 />, description: 'Akses lapangan' },
+      { id: 'reports', label: 'Laporan', icon: <CalendarCheck2 />, description: 'Visualisasi bayar' },
+      { id: 'settings', label: 'Sistem', icon: <Settings />, description: 'General config' },
     ] : [])
   ];
 
@@ -566,70 +601,72 @@ function MobileMenuDrawer({ user, activeTab, setActiveTab, onClose }: { user: Us
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-        className="relative bg-slate-50 w-full max-w-lg rounded-t-[3.5rem] shadow-2xl overflow-hidden pb-12 flex flex-col max-h-[90vh]"
+        className="relative bg-white w-full max-w-lg rounded-t-[3.5rem] shadow-2xl overflow-hidden pb-10 flex flex-col max-h-[92vh]"
       >
-        <div className="w-16 h-1.5 bg-slate-300 rounded-full mx-auto mt-6 mb-2" />
+        <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mt-6 mb-2" />
         
-        <div className="px-8 pt-6 pb-4 border-b border-slate-200/50 bg-white">
+        <div className="px-8 pt-6 pb-6 bg-white shrink-0">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white text-xl font-black shadow-lg shadow-indigo-200">
+            <div className="w-16 h-16 bg-slate-900 rounded-3xl flex items-center justify-center text-white text-2xl font-black shadow-2xl relative overflow-hidden">
+               <div className="absolute inset-0 bg-indigo-600 opacity-20" />
                {user.name.charAt(0)}
             </div>
-            <div>
-              <h2 className="text-xl font-black text-slate-800 tracking-tight leading-none">{user.name}</h2>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1.5 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                {user.role} Aktif
-              </p>
+            <div className="min-w-0">
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-none truncate">{user.name}</h2>
+              <div className="flex items-center gap-2 mt-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgb(16,185,129,0.5)]" />
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{user.role} Verified</p>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-8">
-          <div className="grid grid-cols-2 gap-4">
+        <div className="flex-1 overflow-y-auto px-6 py-4 custom-scrollbar">
+          <p className="px-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Navigasi Modul</p>
+          <div className="grid grid-cols-2 gap-3 pb-8">
             {menuItems.map((item, idx) => (
               <motion.button
                 key={item.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.05 }}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: idx * 0.04 }}
                 onClick={() => setActiveTab(item.id)}
                 className={cn(
-                  "flex flex-col items-start p-5 rounded-[2.5rem] transition-all border text-left group relative overflow-hidden",
+                  "flex flex-col items-start p-5 rounded-[2.5rem] transition-all border text-left active:scale-95 group relative overflow-hidden",
                   activeTab === item.id 
-                    ? "bg-white border-indigo-500 ring-2 ring-indigo-500/10 shadow-xl shadow-slate-200" 
-                    : "bg-white border-slate-100 hover:border-indigo-200"
+                    ? "bg-indigo-600 border-indigo-600 shadow-xl shadow-indigo-100" 
+                    : "bg-slate-50 border-slate-100"
                 )}
               >
                 <div className={cn(
-                  "p-3 rounded-2xl mb-4 transition-transform group-active:scale-90 shadow-lg",
-                  activeTab === item.id ? "bg-indigo-600 text-white" : "bg-slate-50 text-slate-400"
+                  "p-3 rounded-2xl mb-4 shadow-sm",
+                  activeTab === item.id ? "bg-white/20 text-white" : "bg-white text-slate-400"
                 )}>
                   {React.cloneElement(item.icon as React.ReactElement, { className: "w-6 h-6" })}
                 </div>
                 <span className={cn(
                   "text-xs font-black uppercase tracking-tight",
-                  activeTab === item.id ? "text-indigo-600" : "text-slate-800"
+                  activeTab === item.id ? "text-white" : "text-slate-900"
                 )}>
                   {item.label}
                 </span>
-                <p className="text-[9px] font-bold text-slate-400 mt-1 leading-tight tracking-tight">
+                <p className={cn(
+                  "text-[9px] font-bold mt-1 leading-tight tracking-tight",
+                  activeTab === item.id ? "text-indigo-100" : "text-slate-400"
+                )}>
                   {item.description}
                 </p>
-                {activeTab === item.id && (
-                  <div className="absolute top-4 right-4 w-1.5 h-1.5 rounded-full bg-indigo-600" />
-                )}
               </motion.button>
             ))}
           </div>
         </div>
 
-        <div className="px-6 pt-4 border-t border-slate-200/50 bg-white/50">
+        <div className="px-6 pb-6 pt-4 shrink-0">
           <button 
             onClick={onClose}
-            className="w-full py-4.5 bg-slate-900 text-white rounded-[2rem] font-black text-xs uppercase tracking-widest active:scale-95 transition-all shadow-xl shadow-slate-200"
+            className="w-full h-16 bg-slate-100 text-slate-500 rounded-[2rem] font-bold text-xs uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2"
           >
-            Tutup Dashboard
+            Sembunyikan Menu
           </button>
         </div>
       </motion.div>
@@ -893,18 +930,20 @@ function AdminDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefr
 
   return (
     <div className="space-y-8 pb-12">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
-            <h2 className="text-2xl font-black tracking-tight text-slate-800">Ringkasan Sistem</h2>
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-10 pb-8 border-b border-slate-200/50">
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-indigo-100">
+              <LayoutDashboard className="w-5 h-5" />
+            </div>
+            <h2 className="text-[28px] font-black tracking-tighter text-slate-900 leading-none">Ringkasan Sistem</h2>
           </div>
-          <p className="text-slate-500 text-sm font-medium">Monitoring arus kas dan operasional RT/RW Net</p>
+          <p className="text-slate-400 text-sm font-semibold tracking-tight">Monitoring arus kas dan operasional layanan ISP secara real-time</p>
         </div>
-        <div className="flex gap-3">
-          <button onClick={() => setShowModal(true)} className="btn-primary group">
-            <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform" /> 
-            <span>Input Transaksi</span>
+        <div className="flex items-center bg-white p-2 rounded-[2rem] border border-slate-100 shadow-sm">
+          <button onClick={() => setShowModal(true)} className="btn-primary w-full md:w-auto h-12">
+            <Plus className="w-5 h-5" /> 
+            <span>Transaksi Baru</span>
           </button>
         </div>
       </header>
@@ -1565,12 +1604,29 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
         </AnimatePresence>
 
 
-      <header className="mb-6">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-3 h-3 rounded-full bg-emerald-500 shadow shadow-emerald-200"></div>
-          <h2 className="text-3xl font-black tracking-tight text-slate-800 font-sans">Input Tagihan</h2>
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-10 pb-8 border-b border-slate-200/50">
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-emerald-500 rounded-[2rem] flex items-center justify-center text-white shadow-xl shadow-emerald-100 rotate-3">
+              <Coins className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-[28px] font-black tracking-tighter text-slate-900 leading-none">Penagihan Lapangan</h2>
+              <p className="text-emerald-600 text-[10px] font-black uppercase tracking-[0.2em] mt-1.5 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-emerald-500 animate-pulse rounded-full" /> Input Tagihan Customer
+              </p>
+            </div>
+          </div>
         </div>
-        <p className="text-slate-500 text-sm font-medium">Layanan pencatatan pembayaran pelanggan</p>
+        <div className="flex items-center bg-white p-2 rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden min-w-[200px]">
+           <div className="px-4 border-r border-slate-100">
+             <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Held Cash</p>
+             <p className="text-sm font-extrabold text-indigo-600">Rp {heldBalance.toLocaleString()}</p>
+           </div>
+           <button onClick={handleDeposit} className="p-3 text-indigo-600 hover:bg-indigo-50 rounded-full transition-all">
+             <RefreshCw className="w-4 h-4" />
+           </button>
+        </div>
       </header>
 
       {/* Input Form Card */}
@@ -3189,69 +3245,49 @@ function UserManagement({ user, refreshTrigger }: { user: User, refreshTrigger?:
 
 function StatCard({ title, amount, icon, color, settings }: { title: string, amount: number, icon: React.ReactNode, color: 'indigo' | 'emerald' | 'rose' | 'amber', settings?: AppSettings | null }) {
   const isNegative = amount < 0;
-  
   const colorMap = {
-    indigo: {
-      bg: 'bg-indigo-50',
-      iconBg: 'bg-indigo-500/10',
-      text: 'text-indigo-600',
-      accent: 'bg-indigo-600'
-    },
-    emerald: {
-      bg: 'bg-emerald-50',
-      iconBg: 'bg-emerald-500/10',
-      text: 'text-emerald-600',
-      accent: 'bg-emerald-600'
-    },
-    rose: {
-      bg: 'bg-rose-50',
-      iconBg: 'bg-rose-500/10',
-      text: 'text-rose-600',
-      accent: 'bg-rose-600'
-    },
-    amber: {
-      bg: 'bg-amber-50',
-      iconBg: 'bg-amber-500/10',
-      text: 'text-amber-600',
-      accent: 'bg-amber-600'
-    }
+    indigo: { accent: 'bg-indigo-600', text: 'text-indigo-600', light: 'bg-indigo-50 border-indigo-100/50' },
+    emerald: { accent: 'bg-emerald-600', text: 'text-emerald-600', light: 'bg-emerald-50 border-emerald-100/50' },
+    rose: { accent: 'bg-rose-600', text: 'text-rose-600', light: 'bg-rose-50 border-rose-100/50' },
+    amber: { accent: 'bg-amber-600', text: 'text-amber-600', light: 'bg-amber-50 border-amber-100/50' },
   };
 
   const style = colorMap[color] || colorMap.indigo;
 
   return (
     <motion.div 
-      whileHover={{ y: -4 }}
-      className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 relative overflow-hidden group transition-all duration-300"
+      whileHover={{ y: -5, scale: 1.01 }}
+      className="bg-white p-7 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 relative overflow-hidden group transition-all duration-300"
     >
       <div className={cn(
-        "absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rounded-full opacity-[0.03] group-hover:opacity-[0.08] transition-all duration-500",
+        "absolute -top-10 -right-10 w-32 h-32 rounded-full opacity-[0.03] group-hover:opacity-[0.08] transition-all duration-700",
         style.accent
       )} />
       
-      <div className="flex items-center gap-4 mb-4 relative z-10 text-slate-100">
-        <div className={cn("p-3 rounded-2xl transition-transform group-hover:scale-110", style.bg)}>
-          {icon}
+      <div className="flex items-start justify-between mb-6 relative z-10">
+        <div className={cn("p-4 rounded-2xl shadow-sm", style.light)}>
+          {React.cloneElement(icon as React.ReactElement, { className: cn("w-6 h-6", style.text) })}
         </div>
-        <div>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{title}</p>
-          <div className="h-0.5 w-6 rounded-full bg-slate-100 mt-1" />
+        <div className={cn("px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5", style.light, style.text)}>
+          <span className={cn("w-1 h-1 rounded-full animate-pulse", style.accent)} />
+          Live Update
         </div>
       </div>
       
-      <p className={cn(
-        "text-2xl font-black tracking-tight tabular-nums relative z-10",
-        isNegative ? "text-rose-600" : "text-slate-800"
-      )}>
-        {settings?.currency_symbol || 'Rp'} {Math.abs(amount).toLocaleString('id-ID')}
-      </p>
-      
-      <div className="absolute bottom-0 left-0 right-0 h-1 bg-slate-50 overflow-hidden rounded-full mx-6 mb-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <motion.div 
-          initial={{ width: 0 }}
-          whileInView={{ width: '100%' }}
-          className={cn("h-full", style.accent)} 
-        />
+      <div className="relative z-10">
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-2.5 leading-none">{title}</p>
+        <p className={cn(
+          "text-3xl font-extrabold tracking-tighter tabular-nums leading-none",
+          isNegative ? "text-rose-600" : "text-slate-900"
+        )}>
+          <span className="text-sm font-bold text-slate-400 mr-2 uppercase">{settings?.currency_symbol || 'Rp'}</span>
+          {new Intl.NumberFormat('id-ID').format(Math.abs(amount))}
+        </p>
+      </div>
+
+      <div className="mt-6 pt-5 border-t border-slate-50 flex items-center justify-between relative z-10">
+         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Aktivitas Terakhir</span>
+         <ArrowRightCircle className="w-3.5 h-3.5 text-slate-200 group-hover:text-indigo-400 transition-colors" />
       </div>
     </motion.div>
   );
