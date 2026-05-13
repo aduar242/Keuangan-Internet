@@ -90,7 +90,8 @@ const CATEGORIES = {
 const getBillingPeriods = () => {
   const periods = [];
   const now = new Date();
-  for (let i = -12; i <= 3; i++) {
+  // Show 12 months back and 12 months forward
+  for (let i = -12; i <= 12; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
     periods.push(d.toISOString().slice(0, 7));
   }
@@ -332,13 +333,13 @@ export default function App() {
                       refreshTrigger={refreshTrigger}
                     />
                   )}
-                  {activeTab === 'history' && <AdminDashboard user={user} settings={settings} refreshTrigger={refreshTrigger} setRefreshTrigger={setRefreshTrigger} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
+                  {activeTab === 'history' && <TransactionHistory user={user} refreshTrigger={refreshTrigger} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
                 </>
               ) : (
                 <>
                   {activeTab === 'dashboard' && <CollectorDashboard user={user} settings={settings} refreshTrigger={refreshTrigger} setRefreshTrigger={setRefreshTrigger} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
                   {activeTab === 'customers' && <CustomerManagement user={user} refreshTrigger={refreshTrigger} />}
-                  {activeTab === 'history' && <CollectorDashboard user={user} settings={settings} refreshTrigger={refreshTrigger} setRefreshTrigger={setRefreshTrigger} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
+                  {activeTab === 'history' && <TransactionHistory user={user} refreshTrigger={refreshTrigger} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
                 </>
               )}
             </motion.div>
@@ -522,7 +523,7 @@ function MobileHeader({ user, settings, printerStatus, checkPrinter, handleLogou
   );
 }
 
-function SidebarLink({ icon, label, onClick, active = false }: { icon: React.ReactNode, label: string, onClick?: () => void, active?: boolean }) {
+function SidebarLink({ icon, label, onClick, active = false }: { icon: React.ReactNode, label: string, onClick?: () => void, active?: boolean, key?: any }) {
   return (
     <button onClick={onClick} className={cn(
       "w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[13px] font-bold transition-all text-left relative group",
@@ -549,28 +550,28 @@ function SidebarLink({ icon, label, onClick, active = false }: { icon: React.Rea
 
 function MobileNav({ activeTab, setActiveTab, user, onOpenMenu }: { activeTab: string, setActiveTab: (t: string) => void, user: User, onOpenMenu: () => void }) {
   return (
-    <nav className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-sm bg-white/90 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] px-4 py-3 rounded-[2.5rem] flex items-center justify-between z-[100] border border-white/50 ring-1 ring-black/5">
-      <MobileNavItem active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home className="w-6 h-6" />} label="Home" />
-      <MobileNavItem active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} icon={<UsersIcon className="w-6 h-6" />} label="Data" />
+    <nav className="md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 w-[94%] max-w-sm bg-white/95 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] px-2 py-2 rounded-[2.5rem] flex items-center justify-between z-[100] border border-white/50 ring-1 ring-black/5 ring-inset">
+      <MobileNavItem active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home className="w-5 h-5" />} label="Home" />
+      <MobileNavItem active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} icon={<UsersIcon className="w-5 h-5" />} label="Data" />
       
-      <div className="relative -mt-14 group">
+      <div className="relative group">
         <button 
           onClick={onOpenMenu}
-          className="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-2xl shadow-indigo-200 hover:scale-110 active:scale-95 transition-all ring-8 ring-slate-50 relative overflow-hidden"
+          className="w-14 h-14 -mt-10 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-2xl shadow-indigo-300 hover:scale-105 active:scale-95 transition-all ring-4 ring-slate-50 relative overflow-hidden group"
         >
-          <div className="absolute inset-0 bg-gradient-to-tr from-white/0 to-white/20 animate-pulse" />
+          <div className="absolute inset-0 bg-gradient-to-tr from-white/0 to-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
           <div className="flex flex-col gap-0.5 items-center justify-center relative z-10">
-            <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
+            <span className="w-1 h-1 bg-white rounded-full"></span>
             <div className="flex gap-0.5">
-              <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
-              <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
+              <span className="w-1 h-1 bg-white rounded-full"></span>
+              <span className="w-1 h-1 bg-white rounded-full"></span>
             </div>
           </div>
         </button>
       </div>
 
-      <MobileNavItem active={activeTab === 'history'} onClick={() => setActiveTab('history')} icon={<History className="w-6 h-6" />} label="Riwayat" />
-      <MobileNavItem active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings className="w-6 h-6" />} label="Fitur" />
+      <MobileNavItem active={activeTab === 'history'} onClick={() => setActiveTab('history')} icon={<History className="w-5 h-5" />} label="Log" />
+      <MobileNavItem active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings className="w-5 h-5" />} label="Lainnya" />
     </nav>
   );
 }
@@ -678,18 +679,18 @@ function MobileMenuDrawer({ user, activeTab, setActiveTab, onClose }: { user: Us
 function MobileNavItem({ active, onClick, icon, label }: { active: boolean, onClick: () => void, icon: React.ReactNode, label?: string }) {
   return (
     <button onClick={onClick} className={cn(
-      "flex-1 flex flex-col items-center justify-center p-1.5 rounded-2xl transition-all duration-300 relative min-w-0",
-      active ? "text-indigo-600 scale-105 sm:scale-110" : "text-slate-400"
+      "flex-1 flex flex-col items-center justify-center p-1 rounded-2xl transition-all duration-300 relative min-w-0 h-10 gap-0",
+      active ? "text-indigo-600 translate-y-[-2px]" : "text-slate-400 opacity-60"
     )}>
       <div className={cn(
-        "p-1.5 sm:p-2 rounded-xl sm:rounded-2xl transition-all",
-        active ? "bg-indigo-50" : ""
+        "transition-transform",
+        active ? "scale-105" : "scale-100"
       )}>
-        {React.cloneElement(icon as React.ReactElement, { className: "w-5 h-5 sm:w-6 sm:h-6" })}
+        {React.cloneElement(icon as React.ReactElement, { className: "w-5 h-5" })}
       </div>
       {label && (
         <span className={cn(
-          "text-[8px] sm:text-[10px] font-black uppercase tracking-tight sm:tracking-widest mt-0.5 sm:mt-1 truncate w-full text-center px-1",
+          "text-[8px] font-black uppercase tracking-tight truncate w-full text-center px-1 leading-none mt-0.5",
           active ? "text-indigo-600" : "text-slate-400"
         )}>
           {label}
@@ -697,8 +698,8 @@ function MobileNavItem({ active, onClick, icon, label }: { active: boolean, onCl
       )}
       {active && (
         <motion.div 
-          layoutId="mobile-nav-indicator"
-          className="absolute -bottom-1 w-4 sm:w-6 h-1 bg-indigo-600 rounded-full"
+          layoutId="mobile-indicator"
+          className="absolute -bottom-1 w-1 h-1 bg-indigo-600 rounded-full"
         />
       )}
     </button>
@@ -707,103 +708,85 @@ function MobileNavItem({ active, onClick, icon, label }: { active: boolean, onCl
 
 function LoginScreen({ onLogin }: { onLogin: (e: React.FormEvent<HTMLFormElement>) => void }) {
   return (
-    <div className="min-h-screen bg-[#0a0c10] flex flex-col items-center justify-center p-6 relative overflow-hidden">
-      {/* Abstract Background Design */}
-      <div className="absolute top-[-15%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/20 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-15%] right-[-10%] w-[50%] h-[50%] bg-emerald-600/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.02] pointer-events-none" />
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
+      {/* Subtle Background elements */}
+      <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-indigo-500/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-emerald-500/5 rounded-full blur-[120px] pointer-events-none" />
 
       <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-md relative z-10"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-sm relative z-10"
       >
-        <div className="text-center mb-12">
-          <motion.div 
-            whileHover={{ rotate: 10, scale: 1.05 }}
-            className="w-24 h-24 bg-indigo-600 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 shadow-[0_20px_50px_rgba(79,70,229,0.3)] border-t-4 border-indigo-400 relative overflow-hidden group"
-          >
-            <div className="absolute inset-0 bg-gradient-to-tr from-white/0 to-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-            <Coins className="w-12 h-12 text-white relative z-10" />
-          </motion.div>
-          <h1 className="text-5xl font-black text-white tracking-tighter uppercase mb-2 bg-clip-text text-transparent bg-gradient-to-b from-white to-white/60">NET CORE <span className="text-indigo-400 italic">PAY</span></h1>
-          <div className="flex items-center justify-center gap-3">
-             <div className="h-[1px] w-8 bg-slate-800" />
-             <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.4em] font-mono whitespace-nowrap">Billing OS v2.4.0</p>
-             <div className="h-[1px] w-8 bg-slate-800" />
+        <div className="bg-white p-10 rounded-[3rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] border border-slate-100">
+          <div className="text-center mb-10">
+            <motion.div 
+              whileHover={{ scale: 1.05 }}
+              className="w-20 h-20 bg-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-indigo-100 border-2 border-white"
+            >
+              <Coins className="w-10 h-10 text-white" />
+            </motion.div>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight mb-2">Billing <span className="text-indigo-600">Net</span></h1>
+            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Enterprise Solution 2024</p>
           </div>
-        </div>
-
-        <div className="bg-[#11141b] border border-white/5 p-10 rounded-[3rem] shadow-xl relative">
-          <div className="absolute -top-4 -right-4 bg-indigo-600 text-white text-[9px] font-black px-3 py-1 rounded-full shadow-lg border border-indigo-400 uppercase tracking-widest">PRO EDITION</div>
           
-          <form onSubmit={onLogin} className="space-y-8">
-            <div className="space-y-3">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] ml-1 text-left block">Identity Access</label>
+          <form onSubmit={onLogin} className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Username</label>
               <div className="relative group">
-                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors">
                   <UserIcon className="w-5 h-5" />
                 </div>
                 <input 
                   type="text" 
                   name="username"
-                  placeholder="USERNAME"
-                  className="w-full bg-[#0a0c10]/50 border border-slate-800 text-white h-16 pl-14 pr-4 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 outline-none transition-all font-black text-sm tracking-widest placeholder:text-slate-700 placeholder:font-bold"
+                  placeholder="admin / penagih1"
+                  className="w-full bg-slate-50 border border-slate-100 text-slate-900 h-14 pl-12 pr-4 rounded-2xl focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/30 outline-none transition-all font-bold text-sm"
                   required
                 />
               </div>
             </div>
 
-            <div className="space-y-3">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] ml-1 text-left block">Security Token</label>
+            <div className="space-y-2">
+              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Password</label>
               <div className="relative group">
-                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors">
                   <Lock className="w-5 h-5" />
                 </div>
                 <input 
                   type="password" 
                   name="password"
-                  placeholder="PASSWORD"
-                   className="w-full bg-[#0a0c10]/50 border border-slate-800 text-white h-16 pl-14 pr-4 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 outline-none transition-all font-black text-sm tracking-widest placeholder:text-slate-700 placeholder:font-bold"
+                  placeholder="••••••••"
+                  className="w-full bg-slate-50 border border-slate-100 text-slate-900 h-14 pl-12 pr-4 rounded-2xl focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/30 outline-none transition-all font-bold text-sm"
                   required
                 />
               </div>
             </div>
 
+            <div className="flex items-center gap-2 pt-2">
+              <input type="checkbox" id="remember" name="remember" className="w-5 h-5 rounded-lg border-2 border-slate-200 text-indigo-600 focus:ring-indigo-500" />
+              <label htmlFor="remember" className="text-xs font-bold text-slate-500 cursor-pointer">Simpan sesi login ini</label>
+            </div>
+
             <button 
               type="submit" 
-              className="w-full bg-indigo-600 hover:bg-white text-white hover:text-indigo-900 h-20 rounded-[2rem] font-black uppercase tracking-[0.2em] text-sm transition-all shadow-[0_20px_40px_rgba(79,70,229,0.2)] active:scale-95 disabled:opacity-50 disabled:cursor-wait mt-4 flex items-center justify-center gap-3 group relative overflow-hidden"
+              className="w-full bg-indigo-600 hover:bg-slate-900 text-white h-16 rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-lg shadow-indigo-100 active:scale-95 flex items-center justify-center gap-2"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-indigo-400 to-indigo-600 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-500 opacity-20" />
-              <span className="relative z-10">INITIALIZE ACCESS</span>
-              <ArrowRightCircle className="w-6 h-6 relative z-10 group-hover:translate-x-1 transition-transform" />
+              MASUK SEKARANG
+              <ArrowRightCircle className="w-4 h-4" />
             </button>
           </form>
 
-          <div className="mt-12 pt-8 border-t border-white/5">
-             <div className="flex items-center gap-3 text-slate-600 text-[9px] font-black uppercase tracking-[0.5em] mb-6 justify-center">
-                <div className="h-[1px] flex-1 bg-slate-800/50"></div>
-                <span>DEMO ACCOUNTS</span>
-                <div className="h-[1px] flex-1 bg-slate-800/50"></div>
-             </div>
-             <div className="grid grid-cols-2 gap-4">
-                <div className="bg-[#0a0c10]/40 p-4 rounded-2xl border border-slate-800 group hover:border-indigo-500/50 transition-all text-center">
-                   <p className="text-white text-[10px] font-black mb-1 group-hover:text-indigo-400 transition-colors tracking-widest uppercase truncate">Admin</p>
-                   <p className="text-slate-600 text-[8px] font-bold uppercase tracking-tighter">admin / admin123</p>
-                </div>
-                <div className="bg-[#0a0c10]/40 p-4 rounded-2xl border border-slate-800 group hover:border-indigo-500/50 transition-all text-center">
-                   <p className="text-white text-[10px] font-black mb-1 group-hover:text-indigo-400 transition-colors tracking-widest uppercase truncate">Penagih</p>
-                   <p className="text-slate-600 text-[8px] font-bold uppercase tracking-tighter">penagih1 / 123</p>
+          <div className="mt-10 pt-6 border-t border-slate-50">
+             <div className="grid grid-cols-1 gap-3">
+                <div className="text-center">
+                   <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest">Aplikasi ini memerlukan akses khusus</p>
                 </div>
              </div>
           </div>
         </div>
         
-        <div className="flex items-center justify-center gap-6 mt-12 opacity-30 group">
-           <div className="h-[1px] w-12 bg-slate-800 group-hover:w-20 transition-all" />
-           <p className="text-slate-500 text-[8px] font-black uppercase tracking-[0.8em]">SECURED BY CORE-TECH</p>
-           <div className="h-[1px] w-12 bg-slate-800 group-hover:w-20 transition-all" />
-        </div>
+        <p className="text-center mt-12 text-slate-300 text-[10px] font-bold uppercase tracking-[0.2em]">Designed & Developed by Core-Tech</p>
       </motion.div>
     </div>
   );
@@ -1383,10 +1366,8 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
     const now = new Date();
     const months = [];
     
-    // We check from join date up to NEXT month (for advance payments)
-    // Professional ISP usually bills for current month.
-    // Let's check from 12 months back up to 2 months ahead.
-    for (let i = -12; i <= 2; i++) {
+    // We check from join date up to 12 months ahead for advance payments
+    for (let i = -12; i <= 12; i++) {
         const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
         const period = d.toISOString().slice(0, 7);
         if (period < joinMonth) continue;
@@ -1646,36 +1627,49 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
               </div>
 
               <div id="recap-print-area" className="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar bg-slate-50/30">
-                 <div className="bg-white rounded-[2rem] border border-slate-100 p-6 shadow-sm space-y-4">
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+                 <div className="bg-white rounded-[2rem] border border-slate-100 p-6 shadow-sm space-y-4 print-container">
+                   <div className="hidden print:block text-center border-b-2 border-dashed border-black pb-4 mb-4">
+                       <h2 className="text-xl font-black uppercase">REKAP SETORAN</h2>
+                       <p className="text-xs font-bold font-sans">{settings?.company_name || 'NET CORE ISP'}</p>
+                       <p className="text-[10px]">{new Date().toLocaleString('id-ID')}</p>
+                    </div>
+
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4 print:border-b-2 print:border-dashed print:border-black">
                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white">
+                          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white print:hidden">
                              <History className="w-5 h-5" />
                           </div>
                           <div>
-                             <p className="text-[10px] font-black text-slate-400 uppercase">Rekap Tanggal</p>
-                             <p className="text-xs font-bold text-slate-900">{new Date().toLocaleDateString('id-ID', { dateStyle: 'long' })}</p>
-                        </div>
+                             <p className="text-[10px] font-black text-slate-400 uppercase print:text-black">Kolektor</p>
+                             <p className="text-xs font-bold text-slate-900 print:text-black">{user.name}</p>
+                         </div>
                        </div>
                        <div className="text-right">
-                          <p className="text-[10px] font-black text-slate-400 uppercase">Total Uang</p>
-                          <p className="text-lg font-black text-indigo-600">Rp {recapToPreview.reduce((sum, t) => sum + t.amount, 0).toLocaleString()}</p>
+                          <p className="text-[10px] font-black text-slate-400 uppercase print:text-black">Total</p>
+                          <p className="text-lg font-black text-indigo-600 print:text-black">Rp {recapToPreview.reduce((sum, t) => sum + t.amount, 0).toLocaleString()}</p>
                        </div>
                     </div>
 
                     <div className="space-y-3">
+                       <p className="hidden print:block text-[10px] font-black uppercase mb-2 border-b border-black">Daftar Transaksi:</p>
                        {recapToPreview.map((t, idx) => (
-                          <div key={t.id} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
+                          <div key={t.id} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0 print:border-b print:border-black/10">
                              <div className="flex items-center gap-3">
-                                <span className="text-[10px] font-black text-slate-300 w-4">{idx + 1}.</span>
+                                <span className="text-[10px] font-black text-slate-300 w-4 print:text-black">{idx + 1}.</span>
                                 <div>
-                                   <p className="text-[11px] font-extrabold text-slate-800 leading-tight truncate max-w-[150px]">{t.customer_name || t.category}</p>
-                                   <p className="text-[8px] font-bold text-slate-400 uppercase">{t.billing_period ? formatPeriod(t.billing_period.split(',')[0].trim()) : t.category}</p>
+                                   <p className="text-[11px] font-extrabold text-slate-800 leading-tight truncate max-w-[150px] print:text-black">{t.customer_name || t.category}</p>
+                                   <p className="text-[8px] font-bold text-slate-400 uppercase print:text-black">{t.billing_period ? formatPeriod(t.billing_period.split(',')[0].trim()) : t.category}</p>
                                 </div>
                              </div>
-                             <p className="text-[11px] font-black text-slate-700 tabular-nums">Rp {t.amount.toLocaleString()}</p>
+                             <p className="text-[11px] font-black text-slate-700 tabular-nums print:text-black">Rp {t.amount.toLocaleString()}</p>
                           </div>
                        ))}
+                    </div>
+                    
+                    <div className="hidden print:block mt-8 pt-4 border-t-2 border-dashed border-black text-center">
+                        <p className="text-[10px] font-bold uppercase mb-8">Tanda Tangan Penerima (Admin)</p>
+                        <div className="h-16"></div>
+                        <p className="text-[10px] font-black">( _______________________ )</p>
                     </div>
                  </div>
               </div>
@@ -1754,6 +1748,7 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
                     onChange={(e) => {
                       setSearchTerm(e.target.value);
                       setShowCustomerList(true);
+                      if (!e.target.value) setSelectedCustomerId('');
                     }}
                     onFocus={() => setShowCustomerList(true)}
                     className="w-full bg-slate-50 text-slate-900 border-2 border-slate-100 px-6 py-5 rounded-[1.5rem] focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-bold text-lg pr-12 placeholder:text-slate-300"
@@ -1789,6 +1784,8 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
                             setSelectedCustomerId(String(c.id));
                             setSearchTerm(c.name);
                             setShowCustomerList(false);
+                            // Auto select category to Monthly if it's a customer
+                            setSelectedCategory('Tagihan Bulanan');
                           }}
                           className="w-full text-left px-5 py-4 hover:bg-indigo-50/50 rounded-xl transition-all border-b last:border-0 border-slate-50 active:scale-[0.98] group"
                         >
@@ -1826,11 +1823,17 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
             <div className="space-y-4">
               <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.1em] px-1">Pilih Keterangan Setoran</label>
               <div className="grid grid-cols-2 gap-3">
-                {['Tagihan Bulanan', 'Pemasangan Baru', 'Denda', 'Voucher', 'Lain-lain'].map((cat) => (
+                {['Tagihan Bulanan', 'Lainnya'].map((cat) => (
                   <button
                     key={cat}
                     type="button"
-                    onClick={() => setSelectedCategory(cat)}
+                    onClick={() => {
+                      setSelectedCategory(cat);
+                      if (cat === 'Lainnya') {
+                        setSelectedPeriods([]);
+                        setAmount('');
+                      }
+                    }}
                     className={cn(
                       "py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border-2",
                       selectedCategory === cat 
@@ -1838,12 +1841,41 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
                         : "bg-slate-50 border-slate-100 text-slate-400 hover:border-slate-200"
                     )}
                   >
-                    {cat}
+                    {cat === 'Tagihan Bulanan' ? 'TAGIHAN BULANAN' : 'BIAYA LAINNYA'}
                   </button>
                 ))}
               </div>
             </div>
           </div>
+
+          {selectedCategory === 'Lainnya' && (
+            <motion.div 
+               initial={{ opacity: 0, y: -10 }}
+               animate={{ opacity: 1, y: 0 }}
+               className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-6 rounded-[2rem] border-2 border-dashed border-slate-200"
+            >
+              <div className="space-y-2">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Keterangan Biaya</label>
+                <input 
+                   name="description" 
+                   placeholder="Mis: Biaya Router, Perbaikan..." 
+                   className="w-full bg-white border border-slate-200 h-14 px-5 rounded-xl font-bold text-slate-800 outline-none focus:ring-4 focus:ring-indigo-500/10"
+                   required={selectedCategory === 'Lainnya'}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nominal (Rp)</label>
+                <FormattedNumberInput 
+                   name="amount" 
+                   value={amount} 
+                   onChange={(val) => setAmount(val)}
+                   placeholder="0"
+                   className="w-full bg-white border border-slate-200 h-14 px-5 rounded-xl font-black text-lg text-slate-800 outline-none focus:ring-4 focus:ring-indigo-500/10"
+                   required={selectedCategory === 'Lainnya'}
+                />
+              </div>
+            </motion.div>
+          )}
 
           {selectedCategory === 'Tagihan Bulanan' && unpaidMonthsList.length > 0 ? (
             <motion.div 
@@ -1852,7 +1884,16 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
                transition={{ duration: 0.2 }}
                className="space-y-4"
             >
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.1em] px-1">Pilih Bulan yang Dibayar (Bisa pilih banyak)</label>
+              <div className="flex justify-between items-center px-1">
+                <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.1em]">Pilih Bulan yang Dibayar</label>
+                <button 
+                  type="button"
+                  onClick={() => setSelectedPeriods(unpaidMonthsList)}
+                  className="text-[9px] font-black text-indigo-600 uppercase tracking-widest"
+                >
+                  Pilih Semua
+                </button>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {unpaidMonthsList.map(m => (
                   <button
@@ -1862,7 +1903,7 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
                     className={cn(
                       "px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border-2",
                       selectedPeriods.includes(m) 
-                        ? "bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-100 scale-110 z-10" 
+                        ? "bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-100 scale-105 z-10" 
                         : "bg-slate-50 border-slate-100 text-slate-400 hover:border-slate-200"
                     )}
                   >
@@ -1875,7 +1916,10 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
           ) : selectedCategory === 'Tagihan Bulanan' && selectedCustomerId ? (
             <div className="bg-emerald-50 border-2 border-emerald-100 p-6 rounded-3xl flex items-center justify-center gap-3">
               <CheckCircle className="w-5 h-5 text-emerald-600" />
-              <span className="text-xs font-black text-emerald-800 uppercase tracking-widest">Semua Tagihan Sudah Lunas</span>
+              <div className="text-left">
+                <p className="text-xs font-black text-emerald-800 uppercase tracking-widest leading-none">Status: LUNAS TOTAL</p>
+                <p className="text-[9px] text-emerald-600 font-bold uppercase mt-1">Pelanggan ini tidak memiliki tunggakan</p>
+              </div>
             </div>
           ) : null}
 
@@ -3419,6 +3463,112 @@ function UserManagement({ user, refreshTrigger }: { user: User, refreshTrigger?:
   );
 }
 
+function TransactionHistory({ user, refreshTrigger, onShowReceipt }: { user: User, refreshTrigger: number, onShowReceipt: (t: Transaction, u: string) => void }) {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  const fetchTransactions = async () => {
+    try {
+      const res = await fetch('/api/transactions', { headers: { 'x-user-id': String(user.id) } });
+      if (res.ok) setTransactions(await res.json());
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchTransactions(); }, [refreshTrigger]);
+
+  const filtered = transactions.filter(t => 
+    (t.customer_name || t.category).toLowerCase().includes(searchTerm.toLowerCase()) ||
+    t.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+        <div>
+          <h2 className="text-3xl font-black text-slate-900 tracking-tight">Log Transaksi</h2>
+          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Total {transactions.length} Aktivitas</p>
+        </div>
+        <div className="relative group w-full md:w-96">
+          <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
+          <input 
+            type="text" 
+            placeholder="Cari nama, kategori, atau catatan..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full h-16 pl-14 pr-6 bg-white border border-slate-100 rounded-3xl font-bold text-slate-700 shadow-sm focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all"
+          />
+        </div>
+      </header>
+
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+           <RefreshCw className="w-10 h-10 text-indigo-600 animate-spin" />
+           <p className="font-black text-slate-400 text-xs uppercase tracking-widest">Sinkronisasi Data...</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4">
+          {filtered.map(t => (
+            <motion.div 
+              key={t.id}
+              layout
+              className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 group hover:shadow-xl hover:shadow-indigo-500/5 transition-all"
+            >
+              <div className="flex items-center gap-4">
+                <div className={cn(
+                  "w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner",
+                  t.type === 'pemasukan' ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
+                )}>
+                  {t.type === 'pemasukan' ? <ArrowUpCircle className="w-8 h-8" /> : <ArrowDownCircle className="w-8 h-8" />}
+                </div>
+                <div>
+                  <h4 className="font-black text-slate-900 text-sm">{t.customer_name || t.category}</h4>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight flex items-center gap-2 mt-0.5">
+                    {t.category} 
+                    {t.billing_period && (
+                      <span className="text-indigo-400">({t.billing_period.split(',').map(p => formatPeriod(p.trim())).join(', ')})</span>
+                    )}
+                  </p>
+                  <p className="text-[10px] text-slate-500 font-medium mt-1 truncate max-w-xs">{t.description}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between md:justify-end gap-10">
+                <div className="text-right">
+                  <p className="text-[10px] text-slate-300 font-black uppercase tracking-tighter mb-1">{t.transaction_date}</p>
+                  <p className={cn(
+                    "text-xl font-black tabular-nums tracking-tighter leading-none",
+                    t.type === 'pemasukan' ? "text-emerald-600" : "text-rose-600"
+                  )}>
+                    {t.type === 'pemasukan' ? '+' : '-'} {t.amount.toLocaleString()}
+                  </p>
+                </div>
+                <button 
+                  onClick={() => onShowReceipt(t, user.name)}
+                  className="w-12 h-12 bg-slate-50 text-slate-400 hover:bg-slate-950 hover:text-white rounded-2xl flex items-center justify-center transition-all active:scale-90"
+                >
+                  <Printer className="w-5 h-5" />
+                </button>
+              </div>
+            </motion.div>
+          ))}
+
+          {filtered.length === 0 && (
+            <div className="bg-white p-20 rounded-[3.5rem] border-2 border-dashed border-slate-100 text-center">
+               <History className="w-16 h-16 text-slate-100 mx-auto mb-4" />
+               <p className="text-slate-400 font-black text-xs uppercase tracking-widest italic">Tidak ada histori transaksi ditemukan</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function StatCard({ title, amount, icon, color, settings }: { title: string, amount: number, icon: React.ReactNode, color: 'indigo' | 'emerald' | 'rose' | 'amber', settings?: AppSettings | null }) {
   const isNegative = amount < 0;
   const colorMap = {
@@ -3626,14 +3776,16 @@ function PaymentReport({ user, refreshTrigger }: { user: User, refreshTrigger?: 
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   useEffect(() => {
-    // Generate last 12 months for the selected year
-    const last12Months = [];
+    // Generate months for the selected year (January to December)
+    const yearMonths = [];
     for (let i = 0; i < 12; i++) {
-      const d = new Date(selectedYear, i, 1);
-      last12Months.push(d.toISOString().slice(0, 7));
+        // Use local date math then format manually to avoid UTC shift
+        const d = new Date(selectedYear, i, 1);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        yearMonths.push(`${y}-${m}`);
     }
-    // Order from left to right (chronological) is already done by i = 0 to 11
-    setMonths(last12Months);
+    setMonths(yearMonths);
   }, [selectedYear]);
 
   useEffect(() => {
