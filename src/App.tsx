@@ -115,6 +115,7 @@ export default function App() {
   const [receiptToPreview, setReceiptToPreview] = useState<{ transaction: Transaction; userName: string } | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   useEffect(() => {
     socket.on('transaction:created', () => setRefreshTrigger(prev => prev + 1));
@@ -258,188 +259,107 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-slate-50 transition-colors duration-500">
-      {/* Sidebar - Desktop */}
-      <aside className="hidden md:flex w-64 bg-slate-900 border-r border-slate-800 flex-col p-6 space-y-8 sticky top-0 h-screen">
-        <div className="flex items-center gap-3 text-white">
-          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
-            <Coins className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="font-bold text-lg leading-tight uppercase tracking-wider">{settings?.company_name || 'RT/RW NET'}</h1>
-            <p className="text-[10px] text-slate-400 font-medium">FINANCE ADMIN v1.0</p>
-          </div>
-        </div>
+    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row overflow-hidden text-slate-900">
+      {/* Desktop View Sidebar */}
+      <DesktopSidebar 
+        user={user} 
+        settings={settings} 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        printerStatus={printerStatus}
+        checkPrinter={checkPrinter}
+        handleLogout={handleLogout}
+        deferredPrompt={deferredPrompt}
+        handleInstallClick={handleInstallClick}
+      />
 
-        <nav className="flex-1 space-y-1">
-          <SidebarLink active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<LayoutDashboard className="w-5 h-5" />} label="Dashboard" />
-          <SidebarLink active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} icon={<UsersIcon className="w-5 h-5" />} label="Pelanggan" />
-          {user.role === 'admin' && (
-            <>
-              <SidebarLink active={activeTab === 'packets'} onClick={() => setActiveTab('packets')} icon={<BarChart3 className="w-5 h-5" />} label="Paket Internet" />
-              <SidebarLink active={activeTab === 'users'} onClick={() => setActiveTab('users')} icon={<Users2 className="w-5 h-5" />} label="User Penagih" />
-              <SidebarLink active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} icon={<CalendarCheck2 className="w-5 h-5" />} label="Laporan Pembayaran" />
-              <SidebarLink active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings className="w-5 h-5" />} label="Pengaturan" />
-            </>
+      {/* Main Container */}
+      <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
+        <MobileHeader 
+          user={user} 
+          settings={settings} 
+          printerStatus={printerStatus} 
+          checkPrinter={checkPrinter} 
+          handleLogout={handleLogout} 
+        />
+
+        <main className="flex-1 overflow-y-auto px-4 py-6 md:px-8 md:py-10 pb-36 md:pb-10 scroll-smooth">
+          {deferredPrompt && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="md:hidden mb-6 bg-indigo-600 rounded-2xl p-4 flex items-center justify-between shadow-lg shadow-indigo-100 border border-indigo-400/50"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-white">
+                  <Download className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-white font-black text-sm tracking-tight">Install App</p>
+                  <p className="text-indigo-100 text-[10px] font-bold">Akses cepat ke peranti anda</p>
+                </div>
+              </div>
+              <button 
+                onClick={handleInstallClick}
+                className="bg-white text-indigo-600 px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all"
+              >
+                PASANG
+              </button>
+            </motion.div>
           )}
-          <SidebarLink active={activeTab === 'history'} onClick={() => setActiveTab('history')} icon={<History className="w-5 h-5" />} label="Riwayat" />
-        </nav>
 
-        {deferredPrompt && (
-          <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl p-4 shadow-xl shadow-indigo-200 mb-4 mx-2 border border-indigo-400/30">
-            <p className="text-[10px] font-black text-indigo-100 uppercase tracking-widest mb-1">Dapatkan Akses Cepat</p>
-            <p className="text-xs font-bold text-white mb-3">Install Aplikasi ke Beranda</p>
-            <button 
-              onClick={handleInstallClick}
-              className="w-full py-2.5 bg-white text-indigo-600 font-black text-[10px] rounded-xl shadow-lg active:scale-95 transition-all uppercase tracking-widest"
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -10 }}
+              transition={{ duration: 0.2 }}
             >
-              INSTALL APP
-            </button>
-          </div>
-        )}
+              {user.role === 'admin' ? (
+                <>
+                  {activeTab === 'dashboard' && <AdminDashboard user={user} settings={settings} refreshTrigger={refreshTrigger} setRefreshTrigger={setRefreshTrigger} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
+                  {activeTab === 'customers' && <CustomerManagement user={user} refreshTrigger={refreshTrigger} />}
+                  {activeTab === 'packets' && <PacketManagement user={user} refreshTrigger={refreshTrigger} />}
+                  {activeTab === 'users' && <UserManagement user={user} refreshTrigger={refreshTrigger} />}
+                  {activeTab === 'reports' && <PaymentReport user={user} refreshTrigger={refreshTrigger} />}
+                  {activeTab === 'settings' && (
+                    <SettingsManagement 
+                      user={user} 
+                      deferredPrompt={deferredPrompt} 
+                      onInstall={handleInstallClick} 
+                      refreshTrigger={refreshTrigger}
+                    />
+                  )}
+                  {activeTab === 'history' && <AdminDashboard user={user} settings={settings} refreshTrigger={refreshTrigger} setRefreshTrigger={setRefreshTrigger} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
+                </>
+              ) : (
+                <>
+                  {activeTab === 'dashboard' && <CollectorDashboard user={user} settings={settings} refreshTrigger={refreshTrigger} setRefreshTrigger={setRefreshTrigger} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
+                  {activeTab === 'customers' && <CustomerManagement user={user} refreshTrigger={refreshTrigger} />}
+                  {activeTab === 'history' && <CollectorDashboard user={user} settings={settings} refreshTrigger={refreshTrigger} setRefreshTrigger={setRefreshTrigger} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
+                </>
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </main>
 
-        <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700/50 mb-4 mx-2">
-          <div className="flex items-center gap-3 mb-3">
-            <div className={cn(
-              "w-9 h-9 rounded-xl flex items-center justify-center transition-all",
-              printerStatus === 'ready' ? "bg-emerald-500/10 text-emerald-400 shadow-inner" : "bg-rose-500/10 text-rose-400 shadow-inner"
-            )}>
-              <Printer className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">Thermal Printer</p>
-              <p className={cn("text-xs font-bold leading-none", printerStatus === 'ready' ? "text-emerald-400" : "text-rose-400")}>
-                {printerStatus === 'ready' ? 'TERHUBUNG' : 
-                 printerStatus === 'checking' ? 'MENGECEK...' : 'TIDAK AKTIF'}
-              </p>
-            </div>
-          </div>
-          <button 
-            onClick={checkPrinter}
-            disabled={printerStatus === 'checking'}
-            className="w-full py-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 text-[10px] font-black rounded-lg transition-all flex items-center justify-center gap-1.5 border border-slate-600/50 active:scale-95"
-          >
-            <RefreshCw className={cn("w-3 h-3", printerStatus === 'checking' && "animate-spin")} />
-            REFRESH KONEKSI
-          </button>
-        </div>
-
-        <div className="pt-6 border-t border-slate-800 space-y-4">
-          <div className="flex items-center gap-3 px-2">
-            <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-white uppercase">
-              {user.name.charAt(0)}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{user.name}</p>
-              <p className="text-xs text-slate-500 capitalize">{user.role}</p>
-            </div>
-          </div>
-          <button 
-            onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-2 py-2 text-slate-400 hover:text-red-400 transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="text-sm font-medium">Keluar</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 px-4 py-8 md:px-8 md:py-10 pb-32 md:pb-10 overflow-x-hidden">
-        {/* Mobile Header */}
-        <div className="md:hidden flex items-center justify-between mb-8">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200">
-              <Coins className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <span className="block font-black text-slate-900 tracking-tighter text-lg leading-none">{settings?.company_name || 'RT/RW NET'}</span>
-              <div className="flex items-center gap-1.5 mt-1">
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{user.role}</span>
-                <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                <button 
-                  onClick={checkPrinter}
-                  disabled={printerStatus === 'checking'}
-                  className="flex items-center gap-1 active:scale-95 transition-transform"
-                >
-                  <div className={cn("w-1.5 h-1.5 rounded-full", printerStatus === 'ready' ? "bg-emerald-500" : "bg-rose-500")}></div>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase">PRINTER {printerStatus === 'ready' ? 'SIAP' : (printerStatus === 'checking' ? '...' : 'OFF')}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-          <button 
-            className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 active:scale-95 transition-all"
-            onClick={handleLogout}
-          >
-            <LogOut className="w-5 h-5" />
-          </button>
-        </div>
-
-        {deferredPrompt && (
-          <motion.div 
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="md:hidden mb-6 bg-indigo-600 rounded-2xl p-4 flex items-center justify-between shadow-lg shadow-indigo-100 border border-indigo-400/50"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-white">
-                <Download className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-white font-black text-sm tracking-tight">Install App</p>
-                <p className="text-indigo-100 text-[10px] font-bold">Akses cepat ke peranti anda</p>
-              </div>
-            </div>
-            <button 
-              onClick={handleInstallClick}
-              className="bg-white text-indigo-600 px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all"
-            >
-              PASANG
-            </button>
-          </motion.div>
-        )}
-
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -10 }}
-            transition={{ duration: 0.2 }}
-          >
-            {user.role === 'admin' ? (
-              <>
-                {activeTab === 'dashboard' && <AdminDashboard user={user} settings={settings} refreshTrigger={refreshTrigger} setRefreshTrigger={setRefreshTrigger} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
-                {activeTab === 'customers' && <CustomerManagement user={user} refreshTrigger={refreshTrigger} />}
-                {activeTab === 'packets' && <PacketManagement user={user} refreshTrigger={refreshTrigger} />}
-                {activeTab === 'users' && <UserManagement user={user} refreshTrigger={refreshTrigger} />}
-                {activeTab === 'reports' && <PaymentReport user={user} refreshTrigger={refreshTrigger} />}
-                {activeTab === 'settings' && (
-                  <SettingsManagement 
-                    user={user} 
-                    deferredPrompt={deferredPrompt} 
-                    onInstall={handleInstallClick} 
-                    refreshTrigger={refreshTrigger}
-                  />
-                )}
-                {activeTab === 'history' && <AdminDashboard user={user} settings={settings} refreshTrigger={refreshTrigger} setRefreshTrigger={setRefreshTrigger} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
-              </>
-            ) : (
-              <>
-                {activeTab === 'dashboard' && <CollectorDashboard user={user} settings={settings} refreshTrigger={refreshTrigger} setRefreshTrigger={setRefreshTrigger} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
-                {activeTab === 'customers' && <CustomerManagement user={user} refreshTrigger={refreshTrigger} />}
-                {activeTab === 'history' && <CollectorDashboard user={user} settings={settings} refreshTrigger={refreshTrigger} setRefreshTrigger={setRefreshTrigger} onShowReceipt={(t, u) => setReceiptToPreview({ transaction: t, userName: u })} />}
-              </>
-            )}
-          </motion.div>
-        </AnimatePresence>
-
-        <MobileNav activeTab={activeTab} setActiveTab={setActiveTab} user={user} />
-      </main>
+        <MobileNav activeTab={activeTab} setActiveTab={setActiveTab} user={user} onOpenMenu={() => setShowMobileMenu(true)} />
+      </div>
 
       {/* Global Modals */}
       <AnimatePresence>
+        {showMobileMenu && (
+          <MobileMenuDrawer 
+            user={user} 
+            activeTab={activeTab} 
+            setActiveTab={(tab) => {
+              setActiveTab(tab);
+              setShowMobileMenu(false);
+            }} 
+            onClose={() => setShowMobileMenu(false)} 
+          />
+        )}
         {receiptToPreview && (
           <ReceiptPreviewModal 
             transaction={receiptToPreview.transaction} 
@@ -453,29 +373,267 @@ export default function App() {
   );
 }
 
+function DesktopSidebar({ user, settings, activeTab, setActiveTab, printerStatus, checkPrinter, handleLogout, deferredPrompt, handleInstallClick }: { user: User, settings: AppSettings | null, activeTab: string, setActiveTab: (t: string) => void, printerStatus: string, checkPrinter: () => void, handleLogout: () => void, deferredPrompt: any, handleInstallClick: () => void }) {
+  return (
+    <aside className="hidden md:flex w-72 bg-slate-900 border-r border-slate-800 flex-col p-8 space-y-8 h-screen sticky top-0 overflow-y-auto">
+      <div className="flex items-center gap-4 text-white">
+        <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-indigo-500/40 rotate-3 group-hover:rotate-0 transition-transform">
+          <Coins className="w-7 h-7" />
+        </div>
+        <div className="min-w-0">
+          <h1 className="font-black text-xl leading-none uppercase tracking-tighter truncate">{settings?.company_name || 'RT/RW NET'}</h1>
+          <p className="text-[10px] text-slate-500 font-black mt-1 uppercase tracking-widest">Finance Portal v2.0</p>
+        </div>
+      </div>
+
+      <nav className="flex-1 space-y-2">
+        <SidebarLink active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<LayoutDashboard className="w-5 h-5" />} label="Dashboard" />
+        <SidebarLink active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} icon={<UsersIcon className="w-5 h-5" />} label="Pelanggan" />
+        {user.role === 'admin' && (
+          <div className="pt-6 space-y-1">
+            <p className="px-3 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-3">Manajemen</p>
+            <SidebarLink active={activeTab === 'packets'} onClick={() => setActiveTab('packets')} icon={<BarChart3 className="w-5 h-5" />} label="Paket Layanan" />
+            <SidebarLink active={activeTab === 'users'} onClick={() => setActiveTab('users')} icon={<Users2 className="w-5 h-5" />} label="Data Petugas" />
+            <SidebarLink active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} icon={<CalendarCheck2 className="w-5 h-5" />} label="Laporan Pembayaran" />
+            <SidebarLink active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings className="w-5 h-5" />} label="Pengaturan Sistem" />
+          </div>
+        )}
+        <div className="pt-6">
+          <SidebarLink active={activeTab === 'history'} onClick={() => setActiveTab('history')} icon={<History className="w-5 h-5" />} label="Riwayat Transaksi" />
+        </div>
+      </nav>
+
+      {deferredPrompt && (
+        <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-3xl p-5 shadow-2xl shadow-indigo-900/20 border border-indigo-500/30">
+          <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-1">Aplikasi Web</p>
+          <p className="text-sm font-black text-white mb-4 leading-tight">Install ke desktop untuk akses lebih cepat</p>
+          <button 
+            onClick={handleInstallClick}
+            className="w-full py-3 bg-white text-indigo-600 font-black text-[10px] rounded-xl shadow-lg active:scale-95 transition-all uppercase tracking-[0.1em]"
+          >
+            PASANG SEKARANG
+          </button>
+        </div>
+      )}
+
+      <div className="bg-slate-800/40 rounded-3xl p-5 border border-slate-700/30">
+        <div className="flex items-center gap-4 mb-4">
+          <div className={cn(
+            "w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-inner",
+            printerStatus === 'ready' ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"
+          )}>
+            <Printer className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">Printer Status</p>
+            <p className={cn("text-xs font-bold leading-none", printerStatus === 'ready' ? "text-emerald-400" : "text-rose-400")}>
+              {printerStatus === 'ready' ? 'READY' : (printerStatus === 'checking' ? 'CHECKING...' : 'OFFLINE')}
+            </p>
+          </div>
+        </div>
+        <button 
+          onClick={checkPrinter}
+          className="w-full py-2.5 bg-slate-700/30 hover:bg-slate-700 text-slate-400 text-[10px] font-black rounded-xl transition-all flex items-center justify-center gap-2 border border-slate-600/30"
+        >
+          <RefreshCw className={cn("w-3 h-3", printerStatus === 'checking' && "animate-spin")} />
+          CEK KONEKSI
+        </button>
+      </div>
+
+      <div className="pt-6 border-t border-slate-800 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 overflow-hidden">
+          <div className="w-10 h-10 rounded-2xl bg-indigo-600/20 flex items-center justify-center text-indigo-400 font-black flex-shrink-0">
+            {user.name.charAt(0)}
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-black text-white truncate">{user.name}</p>
+            <p className="text-[10px] text-slate-500 uppercase font-bold">{user.role}</p>
+          </div>
+        </div>
+        <button 
+          onClick={handleLogout}
+          className="p-3 bg-slate-800/50 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all active:scale-95 flex-shrink-0"
+        >
+          <LogOut className="w-5 h-5" />
+        </button>
+      </div>
+    </aside>
+  );
+}
+
+function MobileHeader({ user, settings, printerStatus, checkPrinter, handleLogout }: { user: User, settings: AppSettings | null, printerStatus: string, checkPrinter: () => void, handleLogout: () => void }) {
+  return (
+    <header className="md:hidden flex items-center justify-between px-6 pt-8 pb-4 bg-slate-50 sticky top-0 z-40">
+      <div className="flex items-center gap-3">
+        <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-100 rotate-2">
+          <Coins className="w-7 h-7 text-white" />
+        </div>
+        <div>
+          <span className="block font-black text-slate-900 tracking-tight text-xl leading-none truncate max-w-[150px]">{settings?.company_name || 'RT/RW NET'}</span>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest leading-none">{user.role}</span>
+            <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+            <button 
+              onClick={checkPrinter}
+              className="flex items-center gap-1 active:scale-95 transition-transform"
+            >
+              <div className={cn("w-1.5 h-1.5 rounded-full", printerStatus === 'ready' ? "bg-emerald-500" : "bg-rose-500")}></div>
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">PRINTER {printerStatus === 'ready' ? 'SIAP' : 'OFF'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <button 
+        className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-slate-400 hover:text-rose-500 active:scale-90 transition-all border border-slate-100"
+        onClick={handleLogout}
+      >
+        <LogOut className="w-5 h-5" />
+      </button>
+    </header>
+  );
+}
+
 function SidebarLink({ icon, label, onClick, active = false }: { icon: React.ReactNode, label: string, onClick?: () => void, active?: boolean }) {
   return (
     <button onClick={onClick} className={cn(
-      "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all text-left",
-      active ? "bg-indigo-600/10 text-indigo-400" : "hover:bg-slate-800 hover:text-white"
+      "w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-black transition-all text-left group",
+      active 
+        ? "bg-indigo-600 text-white shadow-xl shadow-indigo-200" 
+        : "text-slate-500 hover:bg-slate-800 hover:text-white"
     )}>
-      {icon}
-      {label}
+      <div className={cn(
+        "transition-transform group-hover:scale-110 group-active:scale-90",
+        active ? "text-white" : "text-slate-400"
+      )}>
+        {icon}
+      </div>
+      <span className="truncate tracking-tight uppercase text-[11px]">{label}</span>
     </button>
   );
 }
 
-function MobileNav({ activeTab, setActiveTab, user }: { activeTab: string, setActiveTab: (t: string) => void, user: User }) {
+function MobileNav({ activeTab, setActiveTab, user, onOpenMenu }: { activeTab: string, setActiveTab: (t: string) => void, user: User, onOpenMenu: () => void }) {
   return (
-    <nav className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-sm bg-white shadow-xl px-6 py-4 rounded-[2.5rem] flex items-center justify-between z-[100] border border-slate-200 ring-1 ring-black/5">
-      <MobileNavItem active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home className="w-7 h-7" />} label="Utama" />
-      <MobileNavItem active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} icon={<UsersIcon className="w-7 h-7" />} label="Pelanggan" />
-      {user.role === 'admin' ? (
-        <MobileNavItem active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings className="w-7 h-7" />} label="Menu" />
-      ) : (
-        <MobileNavItem active={activeTab === 'history'} onClick={() => setActiveTab('history')} icon={<History className="w-7 h-7" />} label="Riwayat" />
-      )}
+    <nav className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-sm bg-white shadow-[0_20px_50px_rgba(0,0,0,0.2)] px-4 py-3 rounded-[2.5rem] flex items-center justify-between z-[100] border border-slate-200 ring-1 ring-black/5">
+      <MobileNavItem active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<Home className="w-6 h-6" />} label="Home" />
+      <MobileNavItem active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} icon={<UsersIcon className="w-6 h-6" />} label="Pelanggan" />
+      
+      <div className="relative -mt-12 group">
+        <button 
+          onClick={onOpenMenu}
+          className="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-xl shadow-indigo-200 hover:scale-110 active:scale-95 transition-all ring-4 ring-white"
+        >
+          <div className="flex flex-col gap-0.5 items-center justify-center">
+            <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
+            <div className="flex gap-0.5">
+              <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
+              <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
+            </div>
+          </div>
+        </button>
+      </div>
+
+      <MobileNavItem active={activeTab === 'history'} onClick={() => setActiveTab('history')} icon={<History className="w-6 h-6" />} label="Riwayat" />
+      <MobileNavItem active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings className="w-6 h-6" />} label="Fitur" />
     </nav>
+  );
+}
+
+function MobileMenuDrawer({ user, activeTab, setActiveTab, onClose }: { user: User, activeTab: string, setActiveTab: (t: string) => void, onClose: () => void }) {
+  const menuItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard />, description: 'Statistik & Ringkasan', color: 'bg-blue-500' },
+    { id: 'customers', label: 'Pelanggan', icon: <UsersIcon />, description: 'Kelola Database', color: 'bg-indigo-500' },
+    { id: 'history', label: 'Riwayat', icon: <History />, description: 'Transaksi Terakhir', color: 'bg-emerald-500' },
+    ...(user.role === 'admin' ? [
+      { id: 'packets', label: 'Paket', icon: <BarChart3 />, description: 'Atur Layanan', color: 'bg-amber-500' },
+      { id: 'users', label: 'Petugas', icon: <Users2 />, description: 'Tim Penagihan', color: 'bg-orange-500' },
+      { id: 'reports', label: 'Laporan', icon: <CalendarCheck2 />, description: 'Rekap Tahunan', color: 'bg-rose-500' },
+      { id: 'settings', label: 'Setelan', icon: <Settings />, description: 'Konfigurasi App', color: 'bg-slate-700' },
+    ] : [])
+  ];
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-end justify-center">
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+      />
+      <motion.div 
+        initial={{ y: "100%" }}
+        animate={{ y: 0 }}
+        exit={{ y: "100%" }}
+        transition={{ type: "spring", damping: 30, stiffness: 300 }}
+        className="relative bg-slate-50 w-full max-w-lg rounded-t-[3.5rem] shadow-2xl overflow-hidden pb-12 flex flex-col max-h-[90vh]"
+      >
+        <div className="w-16 h-1.5 bg-slate-300 rounded-full mx-auto mt-6 mb-2" />
+        
+        <div className="px-8 pt-6 pb-4 border-b border-slate-200/50 bg-white">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white text-xl font-black shadow-lg shadow-indigo-200">
+               {user.name.charAt(0)}
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-slate-800 tracking-tight leading-none">{user.name}</h2>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1.5 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                {user.role} Aktif
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6 py-8">
+          <div className="grid grid-cols-2 gap-4">
+            {menuItems.map((item, idx) => (
+              <motion.button
+                key={item.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.05 }}
+                onClick={() => setActiveTab(item.id)}
+                className={cn(
+                  "flex flex-col items-start p-5 rounded-[2.5rem] transition-all border text-left group relative overflow-hidden",
+                  activeTab === item.id 
+                    ? "bg-white border-indigo-500 ring-2 ring-indigo-500/10 shadow-xl shadow-slate-200" 
+                    : "bg-white border-slate-100 hover:border-indigo-200"
+                )}
+              >
+                <div className={cn(
+                  "p-3 rounded-2xl mb-4 transition-transform group-active:scale-90 shadow-lg",
+                  activeTab === item.id ? "bg-indigo-600 text-white" : "bg-slate-50 text-slate-400"
+                )}>
+                  {React.cloneElement(item.icon as React.ReactElement, { className: "w-6 h-6" })}
+                </div>
+                <span className={cn(
+                  "text-xs font-black uppercase tracking-tight",
+                  activeTab === item.id ? "text-indigo-600" : "text-slate-800"
+                )}>
+                  {item.label}
+                </span>
+                <p className="text-[9px] font-bold text-slate-400 mt-1 leading-tight tracking-tight">
+                  {item.description}
+                </p>
+                {activeTab === item.id && (
+                  <div className="absolute top-4 right-4 w-1.5 h-1.5 rounded-full bg-indigo-600" />
+                )}
+              </motion.button>
+            ))}
+          </div>
+        </div>
+
+        <div className="px-6 pt-4 border-t border-slate-200/50 bg-white/50">
+          <button 
+            onClick={onClose}
+            className="w-full py-4.5 bg-slate-900 text-white rounded-[2rem] font-black text-xs uppercase tracking-widest active:scale-95 transition-all shadow-xl shadow-slate-200"
+          >
+            Tutup Dashboard
+          </button>
+        </div>
+      </motion.div>
+    </div>
   );
 }
 
