@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   BarChart3, 
   Wallet, 
@@ -86,15 +86,10 @@ const getUnpaidMonthsList = (customer: Customer | undefined) => {
 };
 
 function FormattedNumberInput({ value, onChange, placeholder, className, required, name }: { value: string, onChange: (val: string) => void, placeholder?: string, className?: string, required?: boolean, name?: string }) {
-  const [displayValue, setDisplayValue] = useState('');
-
-  useEffect(() => {
-    if (!value) {
-      setDisplayValue('');
-      return;
-    }
+  const displayValue = useMemo(() => {
+    if (!value) return '';
     const numeric = String(value).replace(/\D/g, '');
-    setDisplayValue(new Intl.NumberFormat('id-ID').format(Number(numeric)));
+    return new Intl.NumberFormat('id-ID').format(Number(numeric));
   }, [value]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1373,10 +1368,10 @@ function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, set
     }
   }, [selectedCategory]);
 
-  const filteredCustomers = customers.filter(c => 
+  const filteredCustomers = useMemo(() => customers.filter(c => 
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.address?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ), [customers, searchTerm]);
 
   const selectedCustomer = customers.find(c => String(c.id) === selectedCustomerId);
   const unpaidMonthsList = getUnpaidMonthsList(selectedCustomer);
@@ -2645,7 +2640,7 @@ function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigg
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [isOldCustomer, setIsOldCustomer] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const currentMonthStr = new Date().toISOString().slice(0, 7);
+  const currentMonthStr = useMemo(() => new Date().toISOString().slice(0, 7), []);
 
   const fetchData = async () => {
     try {
@@ -2712,10 +2707,10 @@ function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigg
     setShowForm(true);
   };
 
-  const filtered = customers.filter(c => 
+  const filtered = useMemo(() => customers.filter(c => 
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     c.address?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ), [customers, searchTerm]);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
@@ -2845,83 +2840,92 @@ function CustomerManagement({ user, refreshTrigger }: { user: User, refreshTrigg
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filtered.map(c => (
-          <motion.div 
+          <CustomerCard 
             key={c.id} 
-            layout
-            className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-indigo-500/10 transition-all group relative overflow-hidden"
-          >
-             <div className="flex justify-between items-start mb-6">
-                <div>
-                   <h4 className="text-lg font-black text-slate-800 leading-tight">{c.name}</h4>
-                   <div className="flex items-center gap-1.5 mt-2">
-                      {(() => {
-                        const unpaid = getUnpaidMonthsList(c);
-                        const hasPastUnpaid = unpaid.some(p => p <= currentMonthStr);
-                        let statusText = 'LUNAS';
-                        let statusColor = 'bg-emerald-50 text-emerald-600 border border-emerald-100';
-                        
-                        if (unpaid.length === 0) {
-                          statusText = 'LUNAS TOTAL';
-                        } else if (hasPastUnpaid) {
-                          statusText = 'MENUNGGAK';
-                          statusColor = 'bg-rose-50 text-rose-600 border border-rose-100';
-                        } else {
-                          statusText = 'LUNAS BLN INI';
-                          statusColor = 'bg-indigo-50 text-indigo-600 border border-indigo-100';
-                        }
-
-                        return (
-                          <div className={cn("px-3 py-1 rounded-full text-[8px] font-black uppercase flex items-center gap-1 shadow-sm", statusColor)}>
-                            {statusText === 'MENUNGGAK' ? <AlertTriangle className="w-2.5 h-2.5" /> : <CheckCircle className="w-2.5 h-2.5" />}
-                            {statusText}
-                          </div>
-                        );
-                      })()}
-                      <div className="px-3 py-1 bg-slate-50 text-slate-500 text-[8px] font-black uppercase rounded-full border border-slate-100 shadow-sm">
-                         {c.packet.split(' - ')[0]}
-                      </div>
-                   </div>
-                </div>
-                <div className="flex flex-col gap-2">
-                   <button onClick={() => handleEdit(c)} className="p-3 bg-slate-50 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-all active:scale-90">
-                      <Plus className="w-5 h-5 rotate-45" />
-                   </button>
-                </div>
-             </div>
-
-             <div className="space-y-4 mb-6">
-                <div className="flex items-center gap-3 text-xs font-bold text-slate-500">
-                   <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400"><MapPin className="w-4 h-4" /></div>
-                   <span className="truncate">{c.address || 'Alamat tidak diatur'}</span>
-                </div>
-                <div className="flex items-center gap-3 text-xs font-bold text-slate-500">
-                   <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400"><Phone className="w-4 h-4" /></div>
-                   <span>{c.phone || 'No WhatsApp'}</span>
-                </div>
-             </div>
-
-             <div className="bg-slate-50/50 p-4 rounded-3xl border border-dashed border-slate-200 space-y-3">
-                <div className="flex justify-between items-center">
-                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Mulai Berlangganan</span>
-                   <span className="text-[10px] font-bold text-slate-700 flex items-center gap-1">
-                      <Calendar className="w-3" /> {c.created_at?.slice(0, 7) || 'Manual'}
-                   </span>
-                </div>
-             </div>
-
-             {user.role === 'admin' && (
-                <div className="mt-6 pt-4 border-t border-slate-50 flex justify-end">
-                   <button onClick={() => handleDelete(c.id)} className="p-2 text-slate-200 hover:text-rose-400 transition-colors">
-                      <Trash2 className="w-4 h-4" />
-                   </button>
-                </div>
-             )}
-          </motion.div>
+            customer={c} 
+            currentMonthStr={currentMonthStr} 
+            isAdmin={user.role === 'admin'} 
+            onEdit={handleEdit} 
+            onDelete={handleDelete} 
+          />
         ))}
       </div>
     </div>
   );
 }
+
+const CustomerCard = React.memo(({ customer, currentMonthStr, isAdmin, onEdit, onDelete }: { customer: Customer, currentMonthStr: string, isAdmin: boolean, onEdit: (c: Customer) => void, onDelete: (id: number) => void }) => {
+  const unpaid = useMemo(() => getUnpaidMonthsList(customer), [customer]);
+  const hasPastUnpaid = useMemo(() => unpaid.some(p => p <= currentMonthStr), [unpaid, currentMonthStr]);
+
+  let statusText = 'LUNAS';
+  let statusColor = 'bg-emerald-50 text-emerald-600 border border-emerald-100';
+  
+  if (unpaid.length === 0) {
+    statusText = 'LUNAS TOTAL';
+  } else if (hasPastUnpaid) {
+    statusText = 'MENUNGGAK';
+    statusColor = 'bg-rose-50 text-rose-600 border border-rose-100';
+  } else {
+    statusText = 'LUNAS BLN INI';
+    statusColor = 'bg-indigo-50 text-indigo-600 border border-indigo-100';
+  }
+
+  return (
+    <motion.div 
+      layout
+      className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-indigo-500/10 transition-all group relative overflow-hidden"
+    >
+        <div className="flex justify-between items-start mb-6">
+          <div>
+              <h4 className="text-lg font-black text-slate-800 leading-tight">{customer.name}</h4>
+              <div className="flex items-center gap-1.5 mt-2">
+                <div className={cn("px-3 py-1 rounded-full text-[8px] font-black uppercase flex items-center gap-1 shadow-sm", statusColor)}>
+                  {statusText === 'MENUNGGAK' ? <AlertTriangle className="w-2.5 h-2.5" /> : <CheckCircle className="w-2.5 h-2.5" />}
+                  {statusText}
+                </div>
+                <div className="px-3 py-1 bg-slate-50 text-slate-500 text-[8px] font-black uppercase rounded-full border border-slate-100 shadow-sm">
+                    {customer.packet.split(' - ')[0]}
+                </div>
+              </div>
+          </div>
+          <div className="flex flex-col gap-2">
+              <button onClick={() => onEdit(customer)} className="p-3 bg-slate-50 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-all active:scale-90">
+                <Plus className="w-5 h-5 rotate-45" />
+              </button>
+          </div>
+        </div>
+
+        <div className="space-y-4 mb-6">
+          <div className="flex items-center gap-3 text-xs font-bold text-slate-500">
+              <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400"><MapPin className="w-4 h-4" /></div>
+              <span className="truncate">{customer.address || 'Alamat tidak diatur'}</span>
+          </div>
+          <div className="flex items-center gap-3 text-xs font-bold text-slate-500">
+              <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400"><Phone className="w-4 h-4" /></div>
+              <span>{customer.phone || 'No WhatsApp'}</span>
+          </div>
+        </div>
+
+        <div className="bg-slate-50/50 p-4 rounded-3xl border border-dashed border-slate-200 space-y-3">
+          <div className="flex justify-between items-center">
+              <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Mulai Berlangganan</span>
+              <span className="text-[10px] font-bold text-slate-700 flex items-center gap-1">
+                <Calendar className="w-3" /> {customer.created_at?.slice(0, 7) || 'Manual'}
+              </span>
+          </div>
+        </div>
+
+        {isAdmin && (
+          <div className="mt-6 pt-4 border-t border-slate-50 flex justify-end">
+              <button onClick={() => onDelete(customer.id)} className="p-2 text-slate-200 hover:text-rose-400 transition-colors">
+                <Trash2 className="w-4 h-4" />
+              </button>
+          </div>
+        )}
+    </motion.div>
+  );
+});
 
 function PacketManagement({ user, refreshTrigger }: { user: User, refreshTrigger?: number }) {
   const [packets, setPackets] = useState<Packet[]>([]);
@@ -3542,10 +3546,10 @@ function TransactionHistory({ user, refreshTrigger, onShowReceipt }: { user: Use
 
   useEffect(() => { fetchTransactions(); }, [refreshTrigger]);
 
-  const filtered = transactions.filter(t => 
+  const filtered = useMemo(() => transactions.filter(t => 
     (t.customer_name || t.category).toLowerCase().includes(searchTerm.toLowerCase()) ||
     t.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ), [transactions, searchTerm]);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
@@ -3863,7 +3867,23 @@ function PaymentReport({ user, refreshTrigger }: { user: User, refreshTrigger?: 
     fetchReport();
   }, [refreshTrigger]);
 
-  const customers = Array.from(new Set(data.map(d => d.customer_name))).sort();
+  const customersList = useMemo(() => Array.from(new Set(data.map(d => d.customer_name))).sort(), [data]);
+
+  // Indexing data for faster lookup: { customerName: { month: paymentData } }
+  const paymentsByCustomerAndMonth = useMemo(() => {
+    const index: Record<string, Record<string, any>> = {};
+    data.forEach(d => {
+      if (!d.customer_name || !d.billing_period) return;
+      if (!index[d.customer_name]) index[d.customer_name] = {};
+      
+      const periods = d.billing_period.split(',');
+      periods.forEach((p: string) => {
+        const trimmedP = p.trim();
+        index[d.customer_name][trimmedP] = d;
+      });
+    });
+    return index;
+  }, [data]);
 
   return (
     <div className="space-y-6">
@@ -3901,7 +3921,7 @@ function PaymentReport({ user, refreshTrigger }: { user: User, refreshTrigger?: 
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {customers.map(c => {
+              {customersList.map(c => {
                 const customerData = data.filter(d => d.customer_name === c);
                 const address = customerData[0]?.customer_address || '';
                 
@@ -3914,15 +3934,12 @@ function PaymentReport({ user, refreshTrigger }: { user: User, refreshTrigger?: 
                       </div>
                     </td>
                     {months.map(m => {
-                      const payment = data.find(d => 
-                        d.customer_name === c && 
-                        d.billing_period && 
-                        d.billing_period.split(',').includes(m)
-                      );
+                      const payment = paymentsByCustomerAndMonth[c]?.[m];
                       const customerInfo = data.find(d => d.customer_name === c);
                       const registrationMonth = customerInfo?.customer_created_at?.slice(0, 7) || '2000-01';
                       const isAfterRegistration = m >= registrationMonth;
-                      const isPastOrCurrent = m <= new Date().toISOString().slice(0, 7);
+                      const currentMonthStr = new Date().toISOString().slice(0, 7);
+                      const isPastOrCurrent = m <= currentMonthStr;
                       const shouldBePaid = isAfterRegistration && isPastOrCurrent;
                       
                       return (
@@ -3971,7 +3988,7 @@ function PaymentReport({ user, refreshTrigger }: { user: User, refreshTrigger?: 
                   </tr>
                 );
               })}
-              {customers.length === 0 && (
+              {customersList.length === 0 && (
                 <tr>
                   <td colSpan={months.length + 1} className="py-32 text-center">
                     <div className="flex flex-col items-center gap-2">
