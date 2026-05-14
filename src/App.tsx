@@ -13,7 +13,7 @@ import {
 import { 
   DashboardSkeleton, 
 } from './components/LoadingSkeleton';
-import LoginScreen from './components/LoginScreen';
+
 import { 
   DesktopSidebar, 
   MobileHeader, 
@@ -22,7 +22,8 @@ import {
   ReceiptPreviewModal 
 } from './components/Layout';
 
-// Lazy load feature modules
+// Lazy load modules
+const LoginScreen = lazy(() => import('./components/LoginScreen'));
 const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
 const CustomerManagement = lazy(() => import('./components/CustomerManagement'));
 const TransactionHistory = lazy(() => import('./components/TransactionHistory'));
@@ -202,7 +203,11 @@ export default function App() {
   };
 
   if (loadingInitial) return null;
-  if (!user) return <LoginScreen onLogin={handleLogin} />;
+  if (!user) return (
+    <Suspense fallback={<DashboardSkeleton />}>
+      <LoginScreen onLogin={handleLogin} />
+    </Suspense>
+  );
 
   return (
     <div className="min-h-screen bg-slate-50 flex font-sans selection:bg-indigo-100 selection:text-indigo-600 overflow-hidden">

@@ -154,7 +154,7 @@ export default function AdminDashboard({ user, settings, onShowReceipt, refreshT
           collector_name: fullData.collector_name,
           created_at: fullData.created_at
         };
-        generateInvoicePDF(customerObj, transObj, fullData.collector_name || 'Admin');
+        await generateInvoicePDF(customerObj, transObj, fullData.collector_name || 'Admin');
       }
     } catch (err) {
       console.error('Download failed:', err);
