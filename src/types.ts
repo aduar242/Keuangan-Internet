@@ -54,8 +54,3 @@ export interface AppSettings {
   receipt_footer: string;
   currency_symbol: string;
 }
-
-export interface ReceiptState {
-  transaction: Transaction;
-  userName: string;
-}
