@@ -1,5 +1,3 @@
-import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
 import { Transaction, Customer } from '../types';
 
 // Add type for autotable
@@ -9,7 +7,12 @@ declare module 'jspdf' {
   }
 }
 
-export const generateInvoicePDF = (customer: Customer, transaction: Transaction, userName: string) => {
+export const generateInvoicePDF = async (customer: Customer, transaction: Transaction, userName: string) => {
+  // Dynamic import to reduce bundle size
+  const { jsPDF } = await import('jspdf');
+  // @ts-ignore
+  await import('jspdf-autotable');
+  
   const doc = new jsPDF();
   const date = new Date().toLocaleDateString('id-ID');
 
