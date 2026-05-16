@@ -55,7 +55,7 @@ export const generateInvoicePDF = async (customer: Customer, transaction: Transa
       [
         transaction.category,
         transaction.billing_period || '-',
-        `Rp ${transaction.amount.toLocaleString()}`
+        `Rp ${(transaction.amount || 0).toLocaleString()}`
       ]
     ],
     headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' },
@@ -72,7 +72,7 @@ export const generateInvoicePDF = async (customer: Customer, transaction: Transa
   doc.setFont('helvetica', 'bold');
   doc.text('TOTAL PEMBAYARAN', 130, finalY + 10);
   doc.setTextColor(79, 70, 229);
-  doc.text(`Rp ${transaction.amount.toLocaleString()}`, 195, finalY + 10, { align: 'right' });
+  doc.text(`Rp ${(transaction.amount || 0).toLocaleString()}`, 195, finalY + 10, { align: 'right' });
 
   // Footer
   doc.setTextColor(150);

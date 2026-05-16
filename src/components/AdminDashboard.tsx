@@ -260,7 +260,7 @@ export default function AdminDashboard({ user, settings, onShowReceipt, refreshT
                     <span>{d.transactionCount} TRANSAKSI BELUM DISETOR</span>
                   </div>
                   <p className="text-2xl font-black text-amber-600 tabular-nums">
-                    Rp {d.totalAmount.toLocaleString()}
+                    Rp {(d.totalAmount || 0).toLocaleString()}
                   </p>
                 </div>
                 <button 

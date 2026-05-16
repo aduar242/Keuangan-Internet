@@ -40,7 +40,7 @@ export default function CollectorDashboard({ user, settings, onShowReceipt, refr
   const [historyTab, setHistoryTab] = useState<'transaksi' | 'rekap'>('transaksi');
   const [depositStats, setDepositStats] = useState({ heldAmount: 0, pendingConfirmation: 0, confirmedAmount: 0, pendingCount: 0 });
   const [recapToPreview, setRecapToPreview] = useState<Transaction[] | null>(null);
-  const [defaultMonthCount, setDefaultMonthCount] = useState(2);
+  const [viewMonthsAhead, setViewMonthsAhead] = useState(2);
 
   const printTransaction = async (id: number) => {
     try {
@@ -86,9 +86,9 @@ export default function CollectorDashboard({ user, settings, onShowReceipt, refr
       const customer = customers.find(c => String(c.id) === selectedCustomerId);
       if (customer) {
         setSearchTerm(customer.name);
-        const unpaid = getUnpaidMonthsList(customer);
+        const unpaid = getUnpaidMonthsList(customer, viewMonthsAhead);
         if (unpaid.length > 0) {
-          setSelectedPeriods(unpaid.slice(0, defaultMonthCount));
+          setSelectedPeriods(unpaid.slice(0, 1)); // Default to selecting only the first available month (usually oldest debt)
         } else {
           setSelectedPeriods([]);
         }
@@ -113,7 +113,7 @@ export default function CollectorDashboard({ user, settings, onShowReceipt, refr
       setSelectedPeriods([]);
       setSearchTerm('');
     }
-  }, [selectedCustomerId, customers, selectedCategory, defaultMonthCount]);
+  }, [selectedCustomerId, customers, selectedCategory, viewMonthsAhead]);
 
   useEffect(() => {
     if (selectedCustomerId && selectedCategory === 'Tagihan Bulanan') {
@@ -134,7 +134,7 @@ export default function CollectorDashboard({ user, settings, onShowReceipt, refr
   ), [customers, searchTerm]);
 
   const selectedCustomer = customers.find(c => String(c.id) === selectedCustomerId);
-  const unpaidMonthsList = getUnpaidMonthsList(selectedCustomer);
+  const unpaidMonthsList = getUnpaidMonthsList(selectedCustomer, viewMonthsAhead);
 
   const togglePeriod = (period: string) => {
     setSelectedPeriods(prev => 
@@ -186,15 +186,17 @@ export default function CollectorDashboard({ user, settings, onShowReceipt, refr
     
     try {
       const periodsToPay = selectedCategory === 'Tagihan Bulanan' ? selectedPeriods : [new Date().toISOString().slice(0, 7)];
+      const form = e.currentTarget;
+      const descriptionValue = selectedCategory === 'Tagihan Bulanan' 
+        ? `Internet ${periodsToPay.map(p => formatPeriod(p).split(' ')[0]).join(', ')}` 
+        : (form.elements.namedItem('description') as HTMLInputElement)?.value || 'Biaya Lainnya';
       
       const data = {
         type: 'pemasukan',
         category: selectedCategory,
         amount: totalAmount,
-        description: selectedCategory === 'Tagihan Bulanan' 
-          ? `Internet ${periodsToPay.map(p => formatPeriod(p).split(' ')[0]).join(', ')}` 
-          : (e.currentTarget as any).description.value,
-        billing_period: selectedCategory === 'Tagihan Bulanan' ? periodsToPay.join(',') : null,
+        description: descriptionValue,
+        billing_period: selectedCategory === 'Tagihan Bulanan' ? periodsToPay.join(',') : undefined,
         transaction_date: new Date().toISOString().split('T')[0],
         customer_id: selectedCustomerId ? Number(selectedCustomerId) : null
       };
@@ -255,13 +257,13 @@ export default function CollectorDashboard({ user, settings, onShowReceipt, refr
 
   return (
     <div className="space-y-8 max-w-2xl mx-auto pb-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="w-full">
             <div className="bg-indigo-600 p-8 rounded-[3rem] text-white shadow-2xl shadow-indigo-200 border-b-8 border-indigo-800 flex flex-col justify-between min-h-[220px]">
                <div>
                  <p className="text-xs font-black text-indigo-200 uppercase tracking-widest mb-2 flex items-center gap-2">
                    <Wallet className="w-4 h-4" /> Uang yang Anda Pegang
                  </p>
-                 <p className="text-5xl font-black tracking-tighter leading-none mb-2">Rp {heldBalance.toLocaleString()}</p>
+                 <p className="text-6xl font-black tracking-tighter leading-none mb-2">Rp {(Number(heldBalance) || 0).toLocaleString()}</p>
                  <p className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider">Silakan setorkan ke Admin jika sudah banyak</p>
                </div>
                <button 
@@ -272,36 +274,6 @@ export default function CollectorDashboard({ user, settings, onShowReceipt, refr
                  <Coins className="w-5 h-5" /> KONFIRMASI SETORAN
                </button>
             </div>
-           
-           <div className="grid grid-cols-2 gap-4">
-             <div 
-               onClick={() => setShowPrinterSettings(!showPrinterSettings)}
-               className={cn(
-                 "p-5 rounded-[2rem] border transition-all active:scale-95 cursor-pointer flex flex-col justify-between",
-                 showPrinterSettings ? "bg-slate-900 border-slate-900 shadow-xl" : "bg-white border-slate-100 shadow-sm"
-               )}
-             >
-                 <div className={cn(
-                   "w-10 h-10 rounded-xl flex items-center justify-center mb-3",
-                   showPrinterSettings ? "bg-white/10 text-white" : "bg-indigo-50 text-indigo-600"
-                 )}>
-                    <Printer className="w-5 h-5" />
-                 </div>
-                 <div>
-                    <p className={cn("text-[8px] font-black uppercase tracking-widest leading-none mb-1", showPrinterSettings ? "text-slate-500" : "text-slate-400")}>Printer</p>
-                    <p className={cn("text-xs font-black", showPrinterSettings ? "text-white" : "text-slate-800")}>Thermal</p>
-                 </div>
-             </div>
-             <div className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col justify-between">
-                <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-3">
-                   <Target className="w-5 h-5" />
-                </div>
-                <div>
-                   <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Target</p>
-                   <p className="text-xs font-black text-emerald-600">Terbaik</p>
-                </div>
-             </div>
-           </div>
         </div>
 
         <AnimatePresence>
@@ -369,7 +341,7 @@ export default function CollectorDashboard({ user, settings, onShowReceipt, refr
                        </div>
                        <div className="text-right">
                           <p className="text-[10px] font-black text-slate-400 uppercase">Total</p>
-                          <p className="text-lg font-black text-indigo-600">Rp {recapToPreview.reduce((sum, t) => sum + t.amount, 0).toLocaleString()}</p>
+                          <p className="text-lg font-black text-indigo-600">Rp {(recapToPreview.reduce((sum, t) => sum + (t.amount || 0), 0)).toLocaleString()}</p>
                        </div>
                     </div>
 
@@ -383,7 +355,7 @@ export default function CollectorDashboard({ user, settings, onShowReceipt, refr
                                    <p className="text-[8px] font-bold text-slate-400 uppercase">{t.billing_period ? formatPeriod(t.billing_period.split(',')[0].trim()) : t.category}</p>
                                 </div>
                              </div>
-                             <p className="text-[11px] font-black text-slate-700 tabular-nums">Rp {t.amount.toLocaleString()}</p>
+                             <p className="text-[11px] font-black text-slate-700 tabular-nums">Rp {(t.amount || 0).toLocaleString()}</p>
                           </div>
                        ))}
                     </div>
@@ -427,7 +399,7 @@ export default function CollectorDashboard({ user, settings, onShowReceipt, refr
         <div className="flex items-center bg-white p-2 rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden min-w-[200px]">
            <div className="px-4 border-r border-slate-100">
              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Held Cash</p>
-             <p className="text-sm font-extrabold text-indigo-600">Rp {heldBalance.toLocaleString()}</p>
+             <p className="text-sm font-extrabold text-indigo-600">Rp {(heldBalance || 0).toLocaleString()}</p>
            </div>
            <button onClick={handleDeposit} className="p-3 text-indigo-600 hover:bg-indigo-50 rounded-full transition-all">
              <RefreshCw className="w-4 h-4" />
@@ -599,18 +571,26 @@ export default function CollectorDashboard({ user, settings, onShowReceipt, refr
                 <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.1em]">Pilih Bulan yang Dibayar</label>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center bg-slate-50 rounded-xl px-2 py-1 border border-slate-100">
-                    <span className="text-[8px] font-black text-slate-400 uppercase mr-2 ml-1">Auto:</span>
-                    <select 
-                      value={defaultMonthCount}
-                      onChange={(e) => setDefaultMonthCount(Number(e.target.value))}
-                      className="bg-transparent text-[10px] font-black text-indigo-600 outline-none cursor-pointer"
-                    >
-                      <option value={1}>1 Bln</option>
-                      <option value={2}>2 Bln</option>
-                      <option value={3}>3 Bln</option>
-                      <option value={6}>6 Bln</option>
-                    </select>
+                    <span className="text-[8px] font-black text-slate-400 uppercase mr-2 ml-1">Tampilkan Bln Mendatang:</span>
+                    <input 
+                      type="number"
+                      min={0}
+                      max={12}
+                      value={viewMonthsAhead}
+                      onChange={(e) => setViewMonthsAhead(Math.max(0, Number(e.target.value)))}
+                      className="bg-transparent w-8 text-center text-[10px] font-black text-indigo-600 outline-none cursor-pointer"
+                    />
                   </div>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      const arrears = unpaidMonthsList.filter(m => m <= new Date().toISOString().slice(0, 7));
+                      setSelectedPeriods(arrears);
+                    }}
+                    className="text-[9px] font-black text-rose-600 uppercase tracking-widest hover:underline"
+                  >
+                    Arrears Only
+                  </button>
                   <button 
                     type="button"
                     onClick={() => setSelectedPeriods(unpaidMonthsList)}
@@ -658,7 +638,7 @@ export default function CollectorDashboard({ user, settings, onShowReceipt, refr
                   "text-5xl font-black tracking-tighter leading-none mb-4 transition-all tabular-nums",
                   totalAmount > 0 ? "text-emerald-400" : "text-white/20"
                 )}>
-                  Rp {totalAmount.toLocaleString()}
+                  Rp {(totalAmount || 0).toLocaleString()}
                 </p>
              </div>
           </div>
@@ -732,7 +712,7 @@ export default function CollectorDashboard({ user, settings, onShowReceipt, refr
                         "font-black text-sm tabular-nums",
                         t.type === 'pemasukan' ? "text-emerald-600" : "text-rose-600"
                       )}>
-                        Rp {t.amount.toLocaleString()}
+                        Rp {(t.amount || 0).toLocaleString()}
                       </p>
                       <button onClick={() => printTransaction(t.id)} className="text-indigo-600 text-[10px] font-black uppercase">Cetak Ulang</button>
                     </div>
@@ -744,7 +724,7 @@ export default function CollectorDashboard({ user, settings, onShowReceipt, refr
           <div className="space-y-4">
              <div className="bg-indigo-600 p-6 rounded-[3.5rem] text-white shadow-xl shadow-indigo-100">
                 <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-1">Held Balance</p>
-                <p className="text-3xl font-black">Rp {depositStats.heldAmount.toLocaleString()}</p>
+                <p className="text-3xl font-black">Rp {(depositStats.heldAmount || 0).toLocaleString()}</p>
                 <button 
                    onClick={handleDeposit}
                    className="w-full mt-6 bg-white text-indigo-600 py-4 rounded-2xl font-black text-xs uppercase"

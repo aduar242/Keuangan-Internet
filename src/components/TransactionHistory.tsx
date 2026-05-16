@@ -92,7 +92,7 @@ export default function TransactionHistory({ user, refreshTrigger, onShowReceipt
                     "text-xl font-black tabular-nums tracking-tighter leading-none",
                     t.type === 'pemasukan' ? "text-emerald-600" : "text-rose-600"
                   )}>
-                    {t.type === 'pemasukan' ? '+' : '-'} {t.amount.toLocaleString()}
+                    {t.type === 'pemasukan' ? '+' : '-'} {(t.amount || 0).toLocaleString()}
                   </p>
                 </div>
                 <button 

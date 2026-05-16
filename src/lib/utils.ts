@@ -17,7 +17,7 @@ export const formatPeriod = (period: string) => {
   return `${monthNames[parseInt(month) - 1]} ${year}`;
 };
 
-export const getUnpaidMonthsList = (customer: Customer | undefined) => {
+export const getUnpaidMonthsList = (customer: Customer | undefined, futureLimit = 0) => {
   if (!customer) return [];
   
   const paidPeriods = new Set<string>();
@@ -29,7 +29,8 @@ export const getUnpaidMonthsList = (customer: Customer | undefined) => {
   const now = new Date();
   const months = [];
   
-  for (let i = -12; i <= 4; i++) {
+  // Go back 24 months to catch arrears, and up to futureLimit
+  for (let i = -24; i <= futureLimit; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
       const period = d.toISOString().slice(0, 7);
       if (period < joinMonth) continue;

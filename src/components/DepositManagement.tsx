@@ -73,7 +73,7 @@ export default function DepositManagement({ user, refreshTrigger, onRefresh }: {
             </div>
             <div className="mb-6">
                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Setoran</p>
-               <p className="text-2xl font-black text-indigo-600 tabular-nums">Rp {d.total_amount.toLocaleString()}</p>
+               <p className="text-2xl font-black text-indigo-600 tabular-nums">Rp {(d.total_amount || 0).toLocaleString()}</p>
             </div>
             <button 
               onClick={() => handleConfirmDeposit(d.collector_id)}

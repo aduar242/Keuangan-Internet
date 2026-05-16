@@ -161,7 +161,7 @@ export default function PacketManagement({ user, refreshTrigger }: { user: User,
                  <div className="flex items-baseline gap-1">
                     <span className="text-sm font-bold text-slate-400">Rp</span>
                     <span className="text-3xl font-black text-slate-900 tracking-tighter tabular-nums">
-                       {p.price.toLocaleString()}
+                       {(p.price || 0).toLocaleString()}
                     </span>
                     <span className="text-xs font-bold text-slate-300 uppercase tracking-widest ml-1">/ Bln</span>
                  </div>

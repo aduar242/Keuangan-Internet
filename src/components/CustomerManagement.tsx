@@ -258,7 +258,7 @@ export default function CustomerManagement({ user, refreshTrigger }: { user: Use
                       <select name="packet" defaultValue={editingCustomer?.packet} className="w-full bg-slate-50 border-none h-14 px-6 rounded-2xl font-bold text-slate-700 outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all appearance-none" required>
                         <option value="">-- PILIH PAKET --</option>
                         {packets.map(p => (
-                          <option key={p.id} value={`${p.name} - Rp ${p.price.toLocaleString()}`}>{p.name} (Rp {p.price.toLocaleString()})</option>
+                          <option key={p.id} value={`${p.name} - Rp ${(p.price || 0).toLocaleString()}`}>{p.name} (Rp {(p.price || 0).toLocaleString()})</option>
                         ))}
                       </select>
                     </div>

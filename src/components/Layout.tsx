@@ -420,7 +420,7 @@ export function ReceiptPreviewModal({ transaction, userName, settings, onClose }
       
       <div class="flex bold" style="font-size: 13px;">
         <span>TOTAL:</span>
-        <span>Rp ${transaction.amount.toLocaleString()}</span>
+        <span>Rp ${(Number(transaction.amount) || 0).toLocaleString()}</span>
       </div>
       
       <div class="divider"></div>
