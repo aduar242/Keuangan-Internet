@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { 
   PlusCircle, 
   MinusCircle, 
@@ -23,7 +23,9 @@ import { cn, formatPeriod, getUnpaidMonthsList } from '../lib/utils';
 import { generateInvoicePDF } from '../lib/pdf';
 import { FormattedNumberInput } from './Common';
 
-export default function CollectorDashboard({ user, settings, onShowReceipt, refreshTrigger, setRefreshTrigger }: { user: User, settings: AppSettings | null, onShowReceipt?: (t: Transaction, u: string) => void, refreshTrigger?: number, setRefreshTrigger: React.Dispatch<React.SetStateAction<number>> }) {
+const DepositManagement = lazy(() => import('./DepositManagement'));
+
+export default function CollectorDashboard({ user, settings, onShowReceipt, onShowDepositReceipt, refreshTrigger, setRefreshTrigger }: { user: User, settings: AppSettings | null, onShowReceipt?: (t: Transaction, u: string) => void, onShowDepositReceipt?: (r: any) => void, refreshTrigger?: number, setRefreshTrigger: React.Dispatch<React.SetStateAction<number>> }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [packets, setPackets] = useState<Packet[]>([]);
@@ -752,6 +754,13 @@ export default function CollectorDashboard({ user, settings, onShowReceipt, refr
             ))}
         </div>
       </div>
+
+      <div className="mt-8 pt-8 border-t border-slate-100">
+        <Suspense fallback={<div>Loading...</div>}>
+          <DepositManagement user={user} refreshTrigger={refreshTrigger} onShowDepositReceipt={onShowDepositReceipt} />
+        </Suspense>
+      </div>
+
     </div>
   );
 }

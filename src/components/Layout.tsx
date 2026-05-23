@@ -55,6 +55,7 @@ export function DesktopSidebar({ user, settings, activeTab, setActiveTab, printe
   ];
 
   const adminItems: { id: string, label: string, icon: React.ReactNode }[] = [
+    { id: 'collector', label: 'Tugas Penagihan', icon: <Coins className="w-[18px] h-[18px]" /> },
     { id: 'packets', label: 'Paket Layanan', icon: <BarChart3 className="w-[18px] h-[18px]" /> },
     { id: 'users', label: 'Data Petugas', icon: <Users2 className="w-[18px] h-[18px]" /> },
     { id: 'reports', label: 'Laporan', icon: <CalendarCheck2 className="w-[18px] h-[18px]" /> },
@@ -260,7 +261,8 @@ export function MobileMenuDrawer({ user, activeTab, setActiveTab, onClose }: { u
     { id: 'customers', label: 'Pelanggan', icon: <UsersIcon />, description: 'Database & Profil' },
     { id: 'history', label: 'Riwayat', icon: <History />, description: 'Track transaksi' },
     ...(user.role === 'admin' ? [
-      { id: 'packets', label: 'Paket', icon: <LayoutDashboard />, description: 'Atur layanan ISP' },
+      { id: 'collector', label: 'Penagihan', icon: <Coins />, description: 'Mulai Menagih' },
+      { id: 'packets', label: 'Paket', icon: <BarChart3 />, description: 'Atur layanan ISP' },
       { id: 'users', label: 'Petugas', icon: <Users2 />, description: 'Akses lapangan' },
       { id: 'reports', label: 'Laporan', icon: <CalendarCheck2 />, description: 'Visualisasi bayar' },
       { id: 'settings', label: 'Sistem', icon: <Settings />, description: 'General config' },

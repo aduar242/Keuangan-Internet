@@ -3,12 +3,13 @@ import {
   AnimatePresence,
   motion 
 } from 'motion/react';
-import { Plus } from 'lucide-react';
+import { Plus, Info } from 'lucide-react';
 import { 
   User, 
   AppSettings, 
-  Transaction, 
+  Transaction,
   ReceiptState,
+  DepositReceiptState
 } from './types';
 import { 
   DashboardSkeleton, 
@@ -34,6 +35,7 @@ const AdminSettings = lazy(() => import('./components/AdminSettings'));
 const CollectorDashboard = lazy(() => import('./components/CollectorDashboard'));
 const DepositManagement = lazy(() => import('./components/DepositManagement'));
 const TransactionModal = lazy(() => import('./components/TransactionModal'));
+const DepositReceiptModal = lazy(() => import('./components/DepositReceiptModal'));
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -43,11 +45,18 @@ export default function App() {
   const [printerStatus, setPrinterStatus] = useState<'checking' | 'ready' | 'error'>('ready');
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [receipt, setReceipt] = useState<ReceiptState | null>(null);
+  const [depositReceipt, setDepositReceipt] = useState<DepositReceiptState | null>(null);
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [loadingInitial, setLoadingInitial] = useState(true);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [globalAlert, setGlobalAlert] = useState<string | null>(null);
 
   useEffect(() => {
+    // Override default alert
+    window.alert = (message: any) => {
+      setGlobalAlert(String(message));
+    };
+
     const initAuth = () => {
       const savedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
       if (savedUser) {
@@ -109,6 +118,7 @@ export default function App() {
       if (res.ok) {
         const userData = await res.json();
         setUser(userData);
+        setActiveTab('dashboard');
         if (remember) {
           localStorage.setItem('user', JSON.stringify(userData));
         } else {
@@ -161,6 +171,7 @@ export default function App() {
             user={user} 
             settings={settings} 
             onShowReceipt={(t, u) => setReceipt({ transaction: t, userName: u })} 
+            onShowDepositReceipt={(r) => setDepositReceipt(r)}
             refreshTrigger={refreshTrigger}
             setRefreshTrigger={setRefreshTrigger}
           />
@@ -185,6 +196,7 @@ export default function App() {
 
         {user.role === 'admin' && (
           <>
+            {activeTab === 'collector' && <CollectorDashboard user={user} settings={settings} onShowReceipt={(t, u) => setReceipt({ transaction: t, userName: u })} onShowDepositReceipt={(r) => setDepositReceipt(r)} refreshTrigger={refreshTrigger} setRefreshTrigger={setRefreshTrigger} />}
             {activeTab === 'packets' && <PacketManagement user={user} refreshTrigger={refreshTrigger} />}
             {activeTab === 'users' && (
               <div className="space-y-8">
@@ -193,6 +205,7 @@ export default function App() {
                   user={user} 
                   refreshTrigger={refreshTrigger} 
                   onRefresh={() => setRefreshTrigger(t => t + 1)} 
+                  onShowDepositReceipt={(r) => setDepositReceipt(r)}
                 />
               </div>
             )}
@@ -270,6 +283,14 @@ export default function App() {
             />
           )}
 
+          {depositReceipt && (
+            <DepositReceiptModal 
+              receipt={depositReceipt} 
+              settings={settings} 
+              onClose={() => setDepositReceipt(null)} 
+            />
+          )}
+
           {isManualModalOpen && (
             <TransactionModal 
               user={user} 
@@ -282,6 +303,35 @@ export default function App() {
           )}
         </AnimatePresence>
       </main>
+
+      <AnimatePresence>
+        {globalAlert && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setGlobalAlert(null)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" 
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative bg-white w-full max-w-xs rounded-[2rem] shadow-2xl overflow-hidden p-6 text-center"
+            >
+               <div className="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                 <Info className="w-8 h-8" />
+               </div>
+               <h3 className="text-xl font-black text-slate-800 tracking-tight mb-2">Pemberitahuan</h3>
+               <p className="text-sm font-bold text-slate-500 leading-relaxed mb-8">{globalAlert}</p>
+               <button 
+                 onClick={() => setGlobalAlert(null)}
+                 className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl uppercase tracking-widest text-[10px] shadow-lg shadow-indigo-200 active:scale-95 transition-all"
+               >
+                 Mengerti
+               </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }

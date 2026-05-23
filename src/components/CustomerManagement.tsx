@@ -129,6 +129,28 @@ export default function CustomerManagement({ user, refreshTrigger }: { user: Use
         body: JSON.stringify(data)
       });
       if (res.ok) {
+        const savedCustomer = await res.json();
+
+        // Rekam pembayaran awal untuk pelanggan baru jika opsi dicentang
+        if (!editingCustomer && formData.get('record_initial_payment') === 'on' && data.packet) {
+           const packetPriceStr = String(data.packet).split(' - Rp ')[1] || '0';
+           const amount = Number(packetPriceStr.replace(/\D/g, ''));
+           if (amount > 0) {
+              await fetch('/api/transactions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-user-id': String(user.id) },
+                body: JSON.stringify({
+                  customer_id: savedCustomer.id,
+                  type: 'pemasukan',
+                  category: 'Pemasangan Baru',
+                  amount: amount,
+                  description: 'Pembayaran awal registrasi pelanggan',
+                  transaction_date: new Date().toISOString().split('T')[0]
+                })
+              });
+           }
+        }
+
         setShowForm(false);
         setEditingCustomer(null);
         setIsOldCustomer(false);
@@ -274,7 +296,7 @@ export default function CustomerManagement({ user, refreshTrigger }: { user: Use
                     <textarea name="address" defaultValue={editingCustomer?.address} rows={2} placeholder="Gg. Kenanga No. 5..." className="w-full bg-slate-50 border-none p-6 rounded-2xl font-bold text-slate-700 outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all resize-none" />
                   </div>
 
-                  {(isOldCustomer || editingCustomer) && (
+                  {(isOldCustomer || editingCustomer) ? (
                     <div className="bg-indigo-600 rounded-3xl p-6 text-white shadow-xl shadow-indigo-200">
                       <label className="text-[10px] font-black text-indigo-200 uppercase tracking-[0.2em] mb-4 block">Bulan Mulai Berlangganan</label>
                       <input 
@@ -285,6 +307,16 @@ export default function CustomerManagement({ user, refreshTrigger }: { user: Use
                         className="w-full bg-indigo-500 border border-indigo-400 h-14 px-6 rounded-2xl font-black text-white outline-none" 
                       />
                       <p className="text-[9px] font-bold text-indigo-300 mt-4 italic leading-relaxed uppercase tracking-tighter">Sistem akan otomatis menghitung tunggakan mulai dari bulan yang Anda pilih.</p>
+                    </div>
+                  ) : (
+                    <div className="bg-emerald-50 border border-emerald-100 rounded-3xl p-6">
+                      <label className="flex items-center gap-4 cursor-pointer">
+                        <input type="checkbox" name="record_initial_payment" defaultChecked className="w-6 h-6 rounded-lg text-emerald-600 focus:ring-emerald-500/20" />
+                        <div>
+                          <p className="text-xs font-black text-emerald-800 uppercase tracking-widest">Catat Pembayaran Awal</p>
+                          <p className="text-[10px] font-bold text-emerald-600/70 mt-1">Sistem otomatis mencatat pemasukan sesuai harga paket layanan.</p>
+                        </div>
+                      </label>
                     </div>
                   )}
 

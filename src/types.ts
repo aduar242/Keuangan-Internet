@@ -59,3 +59,10 @@ export interface ReceiptState {
   transaction: Transaction;
   userName: string;
 }
+
+export interface DepositReceiptState {
+  date: string;
+  collector_id: number;
+  collector_name: string;
+  total_amount: number;
+}

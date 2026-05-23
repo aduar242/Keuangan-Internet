@@ -10,6 +10,7 @@ import {
 import { motion } from 'motion/react';
 import { User, Transaction } from '../types';
 import { cn } from '../lib/utils';
+import { FormattedNumberInput } from './Common';
 
 const CATEGORIES = {
   pemasukan: ['Tagihan Bulanan', 'Voucher', 'Pemasangan Baru', 'Denda', 'Lainnya'],
@@ -18,6 +19,7 @@ const CATEGORIES = {
 
 export default function TransactionModal({ user, onClose, onSuccess }: { user: User, isAdmin?: boolean, onClose: () => void, onSuccess: (t: Transaction) => void }) {
   const [type, setType] = useState<'pemasukan' | 'pengeluaran'>('pemasukan');
+  const [amount, setAmount] = useState('');
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -26,7 +28,7 @@ export default function TransactionModal({ user, onClose, onSuccess }: { user: U
       const data = {
         type: formData.get('type'),
         category: formData.get('category'),
-        amount: Number(formData.get('amount')),
+        amount: Number(amount),
         description: formData.get('description') || '',
         billing_period: (formData.get('category') === 'Tagihan Bulanan' || formData.get('billing_period')) ? formData.get('billing_period') : null,
         transaction_date: formData.get('transaction_date')
@@ -145,10 +147,17 @@ export default function TransactionModal({ user, onClose, onSuccess }: { user: U
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Nilai Transaksi (Rp)</label>
             <div className="relative group">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors z-10 w-5 h-5 flex items-center justify-center">
                 <Coins className="w-5 h-5" />
               </div>
-              <input name="amount" type="number" step="1000" className="w-full bg-white border border-slate-100 h-16 pl-12 pr-4 rounded-2xl font-black text-2xl text-slate-800 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 outline-none transition-all tabular-nums placeholder:text-slate-200" placeholder="0" required />
+              <FormattedNumberInput 
+                name="amount"
+                value={amount}
+                onChange={setAmount}
+                className="w-full bg-white border border-slate-100 h-16 pl-12 pr-4 rounded-2xl font-black text-2xl text-slate-800 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 outline-none transition-all tabular-nums placeholder:text-slate-200"
+                placeholder="0"
+                required
+              />
             </div>
           </div>
 

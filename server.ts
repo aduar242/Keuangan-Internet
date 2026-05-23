@@ -321,7 +321,7 @@ async function startServer() {
   app.get('/api/deposits/pending', authMiddleware, adminOnly, (req, res) => {
     try {
       const deposits = db.prepare(`
-        SELECT u.name as collector_name, u.id as collector_id, SUM(t.amount) as totalAmount, COUNT(t.id) as transactionCount
+        SELECT u.name as collector_name, u.id as collector_id, SUM(t.amount) as total_amount, COUNT(t.id) as transactionCount
         FROM transactions t
         JOIN users u ON t.user_id = u.id
         WHERE t.status = 'deposited'
@@ -330,6 +330,55 @@ async function startServer() {
       res.json(deposits);
     } catch (err) {
       res.status(500).json({ error: 'Failed to fetch pending deposits' });
+    }
+  });
+
+  app.get('/api/deposits/history', authMiddleware, (req: any, res) => {
+    try {
+      const condition = req.user.role === 'admin' ? "u.role = 'penagih'" : "u.id = ?";
+      const queryParams = req.user.role === 'admin' ? [] : [req.user.id];
+
+      const history = db.prepare(`
+        SELECT 
+          t.transaction_date as date, 
+          u.name as collector_name,
+          u.id as collector_id,
+          SUM(t.amount) as total_amount, 
+          MAX(t.status) as status
+        FROM transactions t
+        JOIN users u ON t.user_id = u.id
+        WHERE t.status IN ('deposited', 'confirmed') AND ${condition}
+        GROUP BY t.transaction_date, u.id
+        ORDER BY t.transaction_date DESC
+        LIMIT 50
+      `).all(...queryParams);
+      res.json(history);
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to fetch deposit history' });
+    }
+  });
+
+  app.get('/api/deposits/details', authMiddleware, (req: any, res) => {
+    try {
+      const { date, collector_id } = req.query;
+      if (req.user.role !== 'admin' && Number(collector_id) !== req.user.id) {
+         return res.status(403).json({ error: 'Unauthorized' });
+      }
+
+      const transactions = db.prepare(`
+        SELECT 
+          t.*, 
+          c.name as customer_name,
+          u.name as collector_name
+        FROM transactions t
+        LEFT JOIN customers c ON t.customer_id = c.id
+        JOIN users u ON t.user_id = u.id
+        WHERE t.transaction_date = ? AND t.user_id = ? AND t.status IN ('deposited', 'confirmed')
+      `).all(date, collector_id);
+
+      res.json(transactions);
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to fetch deposit details' });
     }
   });
 
