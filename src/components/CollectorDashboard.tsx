@@ -258,48 +258,23 @@ export default function CollectorDashboard({ user, settings, onShowReceipt, refr
   return (
     <div className="space-y-8 max-w-2xl mx-auto pb-12">
         <div className="w-full">
-            <div className="bg-indigo-600 p-8 rounded-[3rem] text-white shadow-2xl shadow-indigo-200 border-b-8 border-indigo-800 flex flex-col justify-between min-h-[220px]">
-               <div>
-                 <p className="text-xs font-black text-indigo-200 uppercase tracking-widest mb-2 flex items-center gap-2">
-                   <Wallet className="w-4 h-4" /> Uang yang Anda Pegang
+            <div className="bg-indigo-600 p-8 rounded-[3rem] text-white shadow-2xl shadow-indigo-200 border-b-8 border-indigo-800 flex flex-col justify-between min-h-[280px]">
+               <div className="mt-4">
+                 <p className="text-xs font-black text-indigo-200 uppercase tracking-widest mb-4 flex items-center gap-2">
+                   <Wallet className="w-5 h-5" /> Uang yang Anda Pegang
                  </p>
-                 <p className="text-6xl font-black tracking-tighter leading-none mb-2">Rp {(Number(heldBalance) || 0).toLocaleString()}</p>
+                 <p className="text-7xl font-black tracking-tighter leading-none mb-4">Rp {(Number(heldBalance) || 0).toLocaleString()}</p>
                  <p className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider">Silakan setorkan ke Admin jika sudah banyak</p>
                </div>
                <button 
                  onClick={handleDeposit}
                  disabled={heldBalance === 0}
-                 className="mt-8 w-full bg-white text-indigo-600 py-5 rounded-[2rem] font-black text-sm uppercase tracking-[0.1em] active:scale-95 transition-all shadow-xl shadow-indigo-900/20 disabled:opacity-50 flex items-center justify-center gap-3"
+                 className="mt-10 w-full bg-white text-indigo-600 py-6 rounded-[2rem] font-black text-sm uppercase tracking-[0.1em] active:scale-95 transition-all shadow-xl shadow-indigo-900/20 disabled:opacity-50 flex items-center justify-center gap-3"
                >
-                 <Coins className="w-5 h-5" /> KONFIRMASI SETORAN
+                 <Coins className="w-6 h-6" /> KONFIRMASI SETORAN
                </button>
             </div>
         </div>
-
-        <AnimatePresence>
-          {showPrinterSettings && (
-            <motion.div 
-               initial={{ opacity: 0 }}
-               animate={{ opacity: 1 }}
-               exit={{ opacity: 0 }}
-               transition={{ duration: 0.2 }}
-               className="bg-indigo-600 rounded-3xl p-5 overflow-hidden"
-            >
-               <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-white font-black text-xs uppercase tracking-widest">Printer Thermal</h4>
-                  <div className="px-3 py-1 bg-white/20 rounded-full text-[8px] font-black text-white uppercase">Bluetooth Mode</div>
-               </div>
-               <p className="text-white/70 text-[10px] leading-relaxed mb-4">Pastikan printer thermal 58mm/80mm Anda sudah terkoneksi dengan HP melalui Bluetooth. Sistem akan otomatis memanggil aplikasi printer thermal saat mencetak.</p>
-               <button 
-                  onClick={() => window.print()}
-                  className="w-full bg-white text-indigo-600 py-3 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2"
-               >
-                  <Wifi className="w-4 h-4" /> Tes Cetak Sekarang
-               </button>
-            </motion.div>
-          )}
-      </AnimatePresence>
-
 
       <AnimatePresence>
         {recapToPreview && (
@@ -707,14 +682,20 @@ export default function CollectorDashboard({ user, settings, onShowReceipt, refr
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="flex flex-col items-end gap-2">
                       <p className={cn(
-                        "font-black text-sm tabular-nums",
+                        "font-black text-base tabular-nums leading-none mt-1",
                         t.type === 'pemasukan' ? "text-emerald-600" : "text-rose-600"
                       )}>
                         Rp {(t.amount || 0).toLocaleString()}
                       </p>
-                      <button onClick={() => printTransaction(t.id)} className="text-indigo-600 text-[10px] font-black uppercase">Cetak Ulang</button>
+                      <button 
+                         onClick={() => printTransaction(t.id)} 
+                         className="flex items-center gap-1.5 bg-slate-50 hover:bg-slate-900 text-slate-500 hover:text-white px-3 py-1.5 rounded-lg active:scale-95 transition-all cursor-pointer"
+                      >
+                         <Printer className="w-3 h-3" />
+                         <span className="text-[9px] font-black uppercase tracking-widest">Cetak</span>
+                      </button>
                     </div>
                   </div>
               </motion.div>

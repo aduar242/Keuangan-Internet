@@ -16,6 +16,7 @@ export default function AdminSettings({ user, deferredPrompt, onInstall, refresh
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [resetConfirmation, setResetConfirmation] = useState('');
 
   const fetchSettings = async () => {
     try {
@@ -77,17 +78,18 @@ export default function AdminSettings({ user, deferredPrompt, onInstall, refresh
         </div>
         <div>
           <h2 className="text-2xl font-black text-slate-800 tracking-tight">Pengaturan Sistem</h2>
-          <p className="text-slate-500 text-sm">Kelola identitas bisnis dan konfigurasi aplikasi</p>
+          <p className="text-slate-500 text-sm">Kelola pengaturan perangkat dan identitas aplikasi</p>
         </div>
       </header>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
-        <div className="p-8 space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-4">
-              <h3 className="font-black text-slate-800 uppercase tracking-widest text-xs flex items-center gap-2">
-                <LayoutDashboard className="w-4 h-4 text-indigo-500" /> Identitas Bisnis
-              </h3>
+      {user.role === 'admin' && (
+        <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+          <div className="p-8 space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-4">
+                <h3 className="font-black text-slate-800 uppercase tracking-widest text-xs flex items-center gap-2">
+                  <LayoutDashboard className="w-4 h-4 text-indigo-500" /> Identitas Bisnis
+                </h3>
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Nama Perusahaan / RT/RW Net</label>
                 <input 
@@ -165,6 +167,54 @@ export default function AdminSettings({ user, deferredPrompt, onInstall, refresh
                </>
              )}
            </button>
+        </div>
+      </form>
+      )}
+
+      <form onSubmit={async (e) => {
+         e.preventDefault();
+         const formData = new FormData(e.currentTarget);
+         const password = formData.get('password') as string;
+         if (!password) return;
+         try {
+           const res = await fetch('/api/users/me', {
+             method: 'PUT',
+             headers: { 'Content-Type': 'application/json', 'x-user-id': String(user.id) },
+             body: JSON.stringify({ password })
+           });
+           if (res.ok) {
+             alert('Password berhasil diperbarui.');
+             (e.target as HTMLFormElement).reset();
+           } else {
+             alert('Gagal memperbarui password.');
+           }
+         } catch(err) {
+           alert('Kesalahan koneksi.');
+         }
+      }} className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+        <div className="p-8 space-y-6">
+          <h3 className="font-black text-slate-800 uppercase tracking-widest text-xs flex items-center gap-2">
+            Profil Saya
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Username Login</label>
+                <input disabled defaultValue={user.username} className="w-full bg-slate-50 border-none h-14 px-6 rounded-2xl font-bold text-slate-400 outline-none" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Nama Petugas</label>
+                <input disabled defaultValue={user.name} className="w-full bg-slate-50 border-none h-14 px-6 rounded-2xl font-bold text-slate-400 outline-none" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Password Baru</label>
+              <input name="password" minLength={6} placeholder="Ketik password baru..." className="w-full bg-slate-50 border-none h-14 px-6 rounded-2xl font-bold text-slate-700 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all mb-4" />
+              <button type="submit" className="w-full bg-slate-900 hover:bg-black text-white font-black py-4 rounded-2xl transition-all active:scale-95 text-xs uppercase tracking-widest">
+                Update Password
+              </button>
+            </div>
+          </div>
         </div>
       </form>
 
@@ -246,33 +296,38 @@ export default function AdminSettings({ user, deferredPrompt, onInstall, refresh
                     Akun Petugas dan Pengaturan Bisnis tetap aman. Gunakan ini jika ingin mulai dari awal (Test over).
                   </p>
                </div>
-               <button 
-                 onClick={async () => {
-                   if (confirm('APAKAH ANDA YAKIN? Semua data pelanggan dan transaksi akan DIHAPUS PERMANEN. Akun petugas tidak akan terhapus.')) {
-                     const pass = prompt('Ketik "KONFIRMASI" untuk melanjutkan:');
-                     if (pass === 'KONFIRMASI') {
-                       try {
-                          const res = await fetch('/api/admin/reset-database', {
-                            method: 'POST',
-                            headers: { 'x-user-id': String(user.id) }
-                          });
-                          if (res.ok) {
-                            alert('Database berhasil dikosongkan!');
-                            window.location.reload();
-                          } else {
-                            alert('Gagal mengosongkan database.');
-                          }
-                       } catch (err) {
-                          alert('Terjadi kesalahan koneksi.');
-                       }
+               <div className="flex flex-col gap-3">
+                 <input 
+                   type="text" 
+                   placeholder='Ketik "KONFIRMASI"' 
+                   value={resetConfirmation}
+                   onChange={e => setResetConfirmation(e.target.value)}
+                   className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 text-center uppercase focus:ring-2 focus:ring-rose-500/20 outline-none"
+                 />
+                 <button 
+                   disabled={resetConfirmation !== 'KONFIRMASI'}
+                   onClick={async () => {
+                     if (resetConfirmation === 'KONFIRMASI') {
+                         try {
+                            const res = await fetch('/api/admin/reset-database', {
+                              method: 'POST',
+                              headers: { 'x-user-id': String(user.id) }
+                            });
+                            if (res.ok) {
+                              setResetConfirmation('');
+                              window.location.reload();
+                            }
+                         } catch (err) {
+                            console.error(err);
+                         }
                      }
-                   }
-                 }}
-                 className="bg-rose-500 hover:bg-black text-white font-black px-10 py-5 rounded-2xl shadow-xl shadow-rose-200 transition-all active:scale-95 text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3"
-               >
-                 <Trash2 className="w-5 h-5" />
-                 Reset Database
-               </button>
+                   }}
+                   className="bg-rose-500 disabled:opacity-50 hover:bg-black text-white font-black px-10 py-5 rounded-2xl shadow-xl shadow-rose-200 transition-all active:scale-95 text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3"
+                 >
+                   <Trash2 className="w-5 h-5" />
+                   Reset Database
+                 </button>
+               </div>
             </div>
           </div>
         </div>

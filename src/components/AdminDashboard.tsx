@@ -20,6 +20,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { User, Transaction, DashboardStats, Customer, AppSettings } from '../types';
 import { cn, formatPeriod } from '../lib/utils';
 import { generateInvoicePDF } from '../lib/pdf';
+import TransactionModal from './TransactionModal';
 
 export function StatCard({ title, amount, icon, color, settings }: { title: string, amount: number, icon: React.ReactNode, color: 'indigo' | 'emerald' | 'rose' | 'amber', settings?: AppSettings | null }) {
   const isNegative = amount < 0;
@@ -163,7 +164,6 @@ export default function AdminDashboard({ user, settings, onShowReceipt, refreshT
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Yakin ingin menghapus transaksi ini?')) return;
     try {
       const res = await fetch(`/api/transactions/${id}`, {
         method: 'DELETE',
@@ -172,17 +172,14 @@ export default function AdminDashboard({ user, settings, onShowReceipt, refreshT
       if (res.ok) {
         fetchData();
       } else {
-        const errorData = await res.json();
-        alert(errorData.error || 'Gagal menghapus transaksi.');
+        console.error('Gagal menghapus transaksi.');
       }
     } catch (err) {
       console.error(err);
-      alert('Terjadi kesalahan koneksi saat menghapus.');
     }
   };
 
   const handleConfirmDeposit = async (collectorId: number) => {
-    if (!confirm('Konfirmasi terima uang setoran ini?')) return;
     try {
       const res = await fetch('/api/deposits/confirm', {
         method: 'POST',
@@ -192,12 +189,10 @@ export default function AdminDashboard({ user, settings, onShowReceipt, refreshT
       if (res.ok) {
         fetchData();
       } else {
-        const errorData = await res.json();
-        alert(errorData.error || 'Gagal konfirmasi setoran.');
+        console.error('Gagal konfirmasi setoran.');
       }
     } catch (err) {
       console.error(err);
-      alert('Terjadi kesalahan koneksi saat konfirmasi setoran.');
     }
   };
 
@@ -344,6 +339,19 @@ export default function AdminDashboard({ user, settings, onShowReceipt, refreshT
           )}
         </div>
       </div>
+
+      <AnimatePresence>
+        {showModal && (
+          <TransactionModal 
+            user={user} 
+            onClose={() => setShowModal(false)} 
+            onSuccess={() => {
+              setShowModal(false);
+              if (setRefreshTrigger) setRefreshTrigger(t => t + 1);
+            }} 
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

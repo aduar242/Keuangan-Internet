@@ -3,13 +3,14 @@ import { PlusCircle, X, Trash2, Edit2, Zap, Tag } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Packet } from '../types';
 import { cn } from '../lib/utils';
-import { FormattedNumberInput } from './Common';
+import { FormattedNumberInput, ConfirmationModal } from './Common';
 
 export default function PacketManagement({ user, refreshTrigger }: { user: User, refreshTrigger?: number }) {
   const [packets, setPackets] = useState<Packet[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingPacket, setEditingPacket] = useState<Packet | null>(null);
   const [price, setPrice] = useState('');
+  const [packetToDelete, setPacketToDelete] = useState<number | null>(null);
 
   const fetchPackets = async () => {
     try {
@@ -52,20 +53,23 @@ export default function PacketManagement({ user, refreshTrigger }: { user: User,
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Hapus paket ini?')) return;
+  const confirmDelete = async () => {
+    if (!packetToDelete) return;
     try {
-      const res = await fetch(`/api/packets/${id}`, { method: 'DELETE', headers: { 'x-user-id': String(user.id) } });
+      const res = await fetch(`/api/packets/${packetToDelete}`, { method: 'DELETE', headers: { 'x-user-id': String(user.id) } });
       if (res.ok) {
+        setPacketToDelete(null);
         fetchPackets();
       } else {
-        const errorData = await res.json();
-        alert(errorData.error || 'Gagal menghapus paket.');
+        console.error('Gagal menghapus paket.');
       }
     } catch (err) {
       console.error(err);
-      alert('Terjadi kesalahan koneksi saat menghapus paket.');
     }
+  };
+
+  const handleDelete = (id: number) => {
+    setPacketToDelete(id);
   };
 
   const handleEdit = (packet: Packet) => {
@@ -169,6 +173,14 @@ export default function PacketManagement({ user, refreshTrigger }: { user: User,
            </motion.div>
         ))}
       </div>
+
+      <ConfirmationModal 
+        isOpen={!!packetToDelete}
+        title="Hapus Paket Layanan?"
+        message="Hati-hati! Paket yang dihapus tidak tersedia lagi untuk registrasi pelanggan baru. Anda yakin ingin menghapus ini?"
+        onConfirm={confirmDelete}
+        onCancel={() => setPacketToDelete(null)}
+      />
     </div>
   );
 }

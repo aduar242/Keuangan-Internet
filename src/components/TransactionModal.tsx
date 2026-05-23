@@ -27,7 +27,7 @@ export default function TransactionModal({ user, onClose, onSuccess }: { user: U
         type: formData.get('type'),
         category: formData.get('category'),
         amount: Number(formData.get('amount')),
-        description: formData.get('description'),
+        description: formData.get('description') || '',
         billing_period: (formData.get('category') === 'Tagihan Bulanan' || formData.get('billing_period')) ? formData.get('billing_period') : null,
         transaction_date: formData.get('transaction_date')
       };
@@ -55,23 +55,23 @@ export default function TransactionModal({ user, onClose, onSuccess }: { user: U
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-end justify-center md:items-center p-0 md:p-4">
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
         transition={{ duration: 0.2 }}
-        className="absolute inset-0 bg-slate-900/90" 
+        className="absolute inset-0 bg-slate-900/90 backdrop-blur-sm" 
       />
       <motion.div 
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 0, y: 100 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 10 }}
-        transition={{ duration: 0.2 }}
-        className="relative bg-slate-50 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden"
+        exit={{ opacity: 0, y: 100 }}
+        transition={{ duration: 0.3, type: 'spring', damping: 25, stiffness: 200 }}
+        className="relative bg-slate-50 w-full md:max-w-lg rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl overflow-hidden max-h-[95vh] md:max-h-[90vh] flex flex-col"
       >
-        <div className="bg-white p-6 border-b border-slate-100 flex items-center justify-between">
+        <div className="bg-white p-6 md:p-8 border-b border-slate-100 flex items-center justify-between shrink-0">
            <div>
               <h3 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">
                 <FileText className="w-5 h-5 text-indigo-500" /> Input Manual
@@ -83,7 +83,7 @@ export default function TransactionModal({ user, onClose, onSuccess }: { user: U
            </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-6">
+        <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6 overflow-y-auto w-full">
           <div className="grid grid-cols-2 gap-4 p-1.5 bg-slate-200/50 rounded-2xl">
              <button 
                 type="button" 

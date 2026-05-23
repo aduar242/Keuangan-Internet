@@ -14,6 +14,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Customer, Packet } from '../types';
 import { cn, getUnpaidMonthsList } from '../lib/utils';
+import { ConfirmationModal } from './Common';
 
 export const CustomerCard = React.memo(({ customer, currentMonthStr, isAdmin, onEdit, onDelete }: { customer: Customer, currentMonthStr: string, isAdmin: boolean, onEdit: (c: Customer) => void, onDelete: (id: number) => void }) => {
   const unpaid = useMemo(() => getUnpaidMonthsList(customer), [customer]);
@@ -95,6 +96,7 @@ export default function CustomerManagement({ user, refreshTrigger }: { user: Use
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [isOldCustomer, setIsOldCustomer] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [customerToDelete, setCustomerToDelete] = useState<number | null>(null);
   const currentMonthStr = useMemo(() => new Date().toISOString().slice(0, 7), []);
 
   const fetchData = async () => {
@@ -141,20 +143,23 @@ export default function CustomerManagement({ user, refreshTrigger }: { user: Use
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Hapus pelanggan ini?')) return;
+  const confirmDelete = async () => {
+    if (!customerToDelete) return;
     try {
-      const res = await fetch(`/api/customers/${id}`, { method: 'DELETE', headers: { 'x-user-id': String(user.id) } });
+      const res = await fetch(`/api/customers/${customerToDelete}`, { method: 'DELETE', headers: { 'x-user-id': String(user.id) } });
       if (res.ok) {
+        setCustomerToDelete(null);
         fetchData();
       } else {
-        const errorData = await res.json();
-        alert(errorData.error || 'Gagal menghapus pelanggan.');
+        console.error('Gagal menghapus pelanggan.');
       }
     } catch (err) {
       console.error(err);
-      alert('Terjadi kesalahan koneksi saat menghapus pelanggan.');
     }
+  };
+
+  const handleDelete = (id: number) => {
+    setCustomerToDelete(id);
   };
 
   const handleEdit = (customer: Customer) => {
@@ -196,23 +201,23 @@ export default function CustomerManagement({ user, refreshTrigger }: { user: Use
 
       <AnimatePresence>
         {showForm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[100] flex items-end justify-center md:items-center sm:p-4">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => { setShowForm(false); setEditingCustomer(null); }}
               transition={{ duration: 0.2 }}
-              className="absolute inset-0 bg-slate-900/80" 
+              className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" 
             />
             <motion.div 
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 100 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              transition={{ duration: 0.2 }}
-              className="relative bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden"
+              exit={{ opacity: 0, y: 100 }}
+              transition={{ duration: 0.3, type: "spring", damping: 25, stiffness: 200 }}
+              className="relative bg-white w-full max-w-2xl rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl overflow-hidden max-h-[95vh] md:max-h-[85vh] flex flex-col"
             >
-              <div className="p-8 bg-white border-b border-slate-100 flex items-center justify-between">
+              <div className="p-6 md:p-8 bg-white border-b border-slate-100 flex items-center justify-between shrink-0">
                  <div>
                     <h3 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">
                        <UserIcon className="w-5 h-5 text-indigo-500" /> 
@@ -225,7 +230,7 @@ export default function CustomerManagement({ user, refreshTrigger }: { user: Use
                  </button>
               </div>
 
-              <div className="p-8 max-h-[70vh] overflow-y-auto">
+              <div className="p-6 md:p-8 overflow-y-auto">
                 {!editingCustomer && (
                   <div className="flex bg-slate-100 p-2 rounded-2xl mb-8">
                     <button 
@@ -274,9 +279,9 @@ export default function CustomerManagement({ user, refreshTrigger }: { user: Use
                       <label className="text-[10px] font-black text-indigo-200 uppercase tracking-[0.2em] mb-4 block">Bulan Mulai Berlangganan</label>
                       <input 
                         name="created_at" 
-                        type="month" 
+                        type="date" 
                         required
-                        defaultValue={editingCustomer?.created_at?.slice(0, 7) || new Date().toISOString().slice(0, 7)}
+                        defaultValue={editingCustomer?.created_at?.slice(0, 10) || new Date().toISOString().slice(0, 10)}
                         className="w-full bg-indigo-500 border border-indigo-400 h-14 px-6 rounded-2xl font-black text-white outline-none" 
                       />
                       <p className="text-[9px] font-bold text-indigo-300 mt-4 italic leading-relaxed uppercase tracking-tighter">Sistem akan otomatis menghitung tunggakan mulai dari bulan yang Anda pilih.</p>
@@ -305,6 +310,14 @@ export default function CustomerManagement({ user, refreshTrigger }: { user: Use
           />
         ))}
       </div>
+
+      <ConfirmationModal 
+        isOpen={!!customerToDelete}
+        title="Hapus Pelanggan?"
+        message="Data pelanggan dan semua historis transaksi pembayaran pelanggan ini akan dihapus permanen. Aksi ini tidak dapat dibatalkan."
+        onConfirm={confirmDelete}
+        onCancel={() => setCustomerToDelete(null)}
+      />
     </div>
   );
 }

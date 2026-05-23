@@ -403,7 +403,7 @@ export function ReceiptPreviewModal({ transaction, userName, settings, onClose }
       </div>
       <div class="flex">
         <span>Petugas:</span>
-        <span>${userName}</span>
+        <span>${transaction.collector_name || userName}</span>
       </div>
       
       <div class="divider"></div>

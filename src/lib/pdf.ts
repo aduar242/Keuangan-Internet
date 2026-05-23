@@ -45,7 +45,7 @@ export const generateInvoicePDF = async (customer: Customer, transaction: Transa
   doc.setFont('helvetica', 'normal');
   doc.text(`No. Ref: #TRX-${transaction.id}`, 120, 52);
   doc.text(`Tanggal: ${transaction.transaction_date}`, 120, 57);
-  doc.text(`Petugas: ${userName}`, 120, 62);
+  doc.text(`Petugas: ${transaction.collector_name || userName}`, 120, 62);
 
   // Table
   doc.autoTable({

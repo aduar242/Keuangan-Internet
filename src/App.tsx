@@ -174,6 +174,15 @@ export default function App() {
           />
         )}
         
+        {activeTab === 'settings' && (
+          <AdminSettings 
+            user={user} 
+            refreshTrigger={refreshTrigger} 
+            deferredPrompt={deferredPrompt}
+            onInstall={handleInstallClick}
+          />
+        )}
+
         {user.role === 'admin' && (
           <>
             {activeTab === 'packets' && <PacketManagement user={user} refreshTrigger={refreshTrigger} />}
@@ -188,14 +197,6 @@ export default function App() {
               </div>
             )}
             {activeTab === 'reports' && <PaymentReport user={user} refreshTrigger={refreshTrigger} />}
-            {activeTab === 'settings' && (
-              <AdminSettings 
-                user={user} 
-                refreshTrigger={refreshTrigger} 
-                deferredPrompt={deferredPrompt}
-                onInstall={handleInstallClick}
-              />
-            )}
           </>
         )}
       </Suspense>

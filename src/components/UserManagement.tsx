@@ -3,10 +3,12 @@ import { Plus, Trash2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { User } from '../types';
 import { cn } from '../lib/utils';
+import { ConfirmationModal } from './Common';
 
 export default function UserManagement({ user, refreshTrigger }: { user: User, refreshTrigger?: number }) {
   const [users, setUsers] = useState<User[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<number | null>(null);
 
   const fetchUsers = async () => {
     try {
@@ -41,13 +43,13 @@ export default function UserManagement({ user, refreshTrigger }: { user: User, r
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (id === user.id) return alert('Tidak bisa menghapus akun sendiri!');
-    if (!confirm('Hapus petugas ini?')) return;
+  const confirmDelete = async () => {
+    if (!userToDelete) return;
     try {
-      const res = await fetch(`/api/users/${id}`, { method: 'DELETE', headers: { 'x-user-id': String(user.id) } });
+      const res = await fetch(`/api/users/${userToDelete}`, { method: 'DELETE', headers: { 'x-user-id': String(user.id) } });
       if (res.ok) {
         fetchUsers();
+        setUserToDelete(null);
       } else {
         const errorData = await res.json();
         alert(errorData.error || 'Gagal menghapus petugas.');
@@ -56,6 +58,11 @@ export default function UserManagement({ user, refreshTrigger }: { user: User, r
       console.error(err);
       alert('Terjadi kesalahan koneksi saat menghapus petugas.');
     }
+  };
+
+  const handleDelete = (id: number) => {
+    if (id === user.id) return alert('Tidak bisa menghapus akun sendiri!');
+    setUserToDelete(id);
   };
 
   return (
@@ -141,6 +148,14 @@ export default function UserManagement({ user, refreshTrigger }: { user: User, r
           </table>
         </div>
       </div>
+
+      <ConfirmationModal 
+        isOpen={!!userToDelete}
+        title="Hapus Petugas?"
+        message="Akun petugas ini tidak akan bisa login lagi ke dalam sistem. Data transaksi mereka yang sudah ada tetap aman."
+        onConfirm={confirmDelete}
+        onCancel={() => setUserToDelete(null)}
+      />
     </div>
   );
 }

@@ -534,6 +534,17 @@ async function startServer() {
     }
   });
 
+  app.put('/api/users/me', authMiddleware, (req, res) => {
+    try {
+      const { password } = req.body;
+      if (!password) return res.status(400).json({ error: 'Password cannot be empty' });
+      db.prepare('UPDATE users SET password = ? WHERE id = ?').run(password, req.user.id);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to update profile' });
+    }
+  });
+
   app.delete('/api/users/:id', authMiddleware, adminOnly, (req, res) => {
     try {
       db.prepare('DELETE FROM users WHERE id = ?').run(req.params.id);
