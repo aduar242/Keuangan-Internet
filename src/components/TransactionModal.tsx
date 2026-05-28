@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FileText, 
   LogOut, 
   BarChart3, 
   Calendar, 
   CalendarCheck2, 
-  Coins 
+  Coins,
+  Users
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { User, Transaction } from '../types';
+import { User, Transaction, Customer } from '../types';
 import { cn } from '../lib/utils';
 import { FormattedNumberInput } from './Common';
 
@@ -20,18 +21,29 @@ const CATEGORIES = {
 export default function TransactionModal({ user, onClose, onSuccess }: { user: User, isAdmin?: boolean, onClose: () => void, onSuccess: (t: Transaction) => void }) {
   const [type, setType] = useState<'pemasukan' | 'pengeluaran'>('pemasukan');
   const [amount, setAmount] = useState('');
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [category, setCategory] = useState(CATEGORIES['pemasukan'][0]);
+
+  useEffect(() => {
+    fetch('/api/customers', { headers: { 'x-user-id': String(user.id) } })
+      .then(res => res.json())
+      .then(data => setCustomers(data))
+      .catch(err => console.error(err));
+  }, [user.id]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
       const formData = new FormData(e.currentTarget);
+      const selCat = formData.get('category') as string;
       const data = {
         type: formData.get('type'),
-        category: formData.get('category'),
+        category: selCat,
         amount: Number(amount),
         description: formData.get('description') || '',
-        billing_period: (formData.get('category') === 'Tagihan Bulanan' || formData.get('billing_period')) ? formData.get('billing_period') : null,
-        transaction_date: formData.get('transaction_date')
+        billing_period: (selCat === 'Tagihan Bulanan' || formData.get('billing_period')) ? formData.get('billing_period') : null,
+        transaction_date: formData.get('transaction_date'),
+        customer_id: selCat === 'Tagihan Bulanan' ? Number(formData.get('customer_id')) : null
       };
 
       const res = await fetch('/api/transactions', {
@@ -117,7 +129,7 @@ export default function TransactionModal({ user, onClose, onSuccess }: { user: U
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors">
                   <BarChart3 className="w-4 h-4" />
                 </div>
-                <select name="category" className="w-full bg-white border border-slate-100 h-12 pl-11 pr-4 rounded-xl font-bold text-slate-700 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 outline-none appearance-none transition-all">
+                <select name="category" value={category} onChange={(e) => setCategory(e.target.value)} className="w-full bg-white border border-slate-100 h-12 pl-11 pr-4 rounded-xl font-bold text-slate-700 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 outline-none appearance-none transition-all">
                   {CATEGORIES[type].map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
               </div>
@@ -133,6 +145,21 @@ export default function TransactionModal({ user, onClose, onSuccess }: { user: U
               </div>
             </div>
           </div>
+
+          {category === 'Tagihan Bulanan' && (
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Pilih Pelanggan</label>
+              <div className="relative group">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors">
+                  <Users className="w-4 h-4" />
+                </div>
+                <select name="customer_id" className="w-full bg-white border border-slate-100 h-12 pl-11 pr-4 rounded-xl font-bold text-slate-700 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 outline-none transition-all" required>
+                  <option value="">-- Pilih Pelanggan --</option>
+                  {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Bulan Layanan (Opsional)</label>

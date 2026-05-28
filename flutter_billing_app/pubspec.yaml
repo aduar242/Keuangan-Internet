@@ -1,0 +1,47 @@
+name: flutter_billing_app
+description: "A complete mobile app for collectors and billing clerks in Community ISPs (RT/RW Net), featuring offline-first database, Bluetooth printer receipt integration, and remote API synchronization."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  provider: ^6.1.1
+
+  # Network & API Clients
+  http: ^1.2.1
+  dio: ^5.4.1
+
+  # Local DB & Storage
+  sqflite: ^2.3.0
+  path: ^1.9.0
+  shared_preferences: ^2.2.2
+
+  # Modern UI & Utilities
+  google_fonts: ^6.1.0
+  intl: ^0.19.0
+  animated_snack_bar: ^0.5.0
+  shimmer: ^3.0.0
+  flutter_spinkit: ^5.2.1
+
+  # Bluetooth Printer Integration
+  # Note: blue_thermal_printer or esc_pos_printer are standard for Android thermal receipt machines
+  blue_thermal_printer: ^1.4.6
+  share_plus: ^7.2.1
+  path_provider: ^2.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/

@@ -234,8 +234,10 @@ async function startServer() {
         return res.status(403).json({ error: 'Collectors can only input income' });
       }
 
-      // Check for duplicate billing period for the same customer
-      if (data.category === 'Tagihan Bulanan' && data.customer_id && data.billing_period) {
+      if (data.category === 'Tagihan Bulanan' && data.customer_id) {
+        if (!data.billing_period || data.billing_period.trim() === '') {
+           return res.status(400).json({ error: 'Bulan layanan wajib diisi untuk Tagihan Bulanan' });
+        }
         const periods = data.billing_period.split(',').map((p: string) => p.trim());
         for (const p of periods) {
           const exists = db.prepare(`
